@@ -1,0 +1,241 @@
+/* ===============================
+   Layout
+================================ */
+.flashcard-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 24px;
+}
+
+.flashcard-header {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.reset-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.flashcard-actions {
+  display: flex;
+  gap: 16px;
+}
+
+/* ===============================
+   Flashcard
+================================ */
+.flashcard {
+  width: 520px;
+  height: 220px;
+  perspective: 1000px;
+  cursor: pointer;
+  margin: 24px 0;
+}
+
+.flashcard-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front,
+.flashcard-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  padding: 20px;
+  backface-visibility: hidden;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
+
+/* ===============================
+   Attempt Buttons
+================================ */
+.attempt-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* Base button */
+.attempt-btn {
+  min-width: 90px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- COLORS ---------- */
+
+/* NO — RED */
+.attempt-btn.no {
+  background: #ef4444;
+  color: white;
+}
+
+.attempt-btn.no.active {
+  background: #b91c1c; /* darker red */
+}
+
+/* KINDA — YELLOW */
+.attempt-btn.kinda {
+  background: #facc15;
+  color: #1f2937;
+}
+
+.attempt-btn.kinda.active {
+  background: #ca8a04; /* darker yellow */
+}
+
+/* YES — GREEN */
+.attempt-btn.yes {
+  background: #22c55e;
+  color: white;
+}
+
+.attempt-btn.yes.active {
+  background: #15803d; /* darker green */
+}
+
+/* ---------- PRESS EFFECT ---------- */
+.attempt-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ===============================
+   Navigation Buttons
+================================ */
+.nav-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.nav-buttons button {
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: white;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.nav-buttons button:hover {
+  background: #f3f4f6;
+}
+
+.nav-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   Previous Attempt
+================================ */
+.previous-attempt {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ===============================
+   Reset Modal
+================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  width: 360px;
+  text-align: center;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-cancel {
+  background: #e5e7eb;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-confirm {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ===============================
+   Header Links (Shuffle / Reset)
+================================ */
+.header-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.header-link:hover {
+  color: #1d4ed8;
+}
+
+/* Shuffle has been used */
+.header-link.clicked {
+  color: #1e40af; /* darker blue */
+  text-decoration: underline;
+  font-weight: 500;
+}

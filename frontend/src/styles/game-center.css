@@ -1,0 +1,209 @@
+/* =====================================================
+   GAME CENTER PAGE (Dashboard)
+   ===================================================== */
+
+.game-center {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px;
+  background: #f5f6f7;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #2b2f33;
+}
+
+.game-center h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* =====================================================
+   GAME GRID (Tile layout)
+   ===================================================== */
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: 24px;
+}
+
+/* =====================================================
+   GAME TILE (Dashboard cards)
+   ===================================================== */
+
+.game-tile {
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+  padding: 20px 24px;
+  max-width: 520px;
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  column-gap: 24px;
+  row-gap: 6px;
+}
+
+/* Title */
+.game-tile > :nth-child(1) {
+  grid-column: 1 / 2;
+  grid-row: 1;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Your Highest Score */
+.game-tile > :nth-child(2) {
+  grid-column: 1 / 2;
+  grid-row: 2;
+  font-size: 14px;
+  color: #5f6b7a;
+}
+
+/* Your Rank */
+.game-tile > :nth-child(3) {
+  grid-column: 1 / 2;
+  grid-row: 3;
+  font-size: 14px;
+  color: #5f6b7a;
+}
+
+/* Start button */
+.game-tile > :last-child {
+  grid-column: 2 / 3;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+
+/* =====================================================
+   BUTTONS (ISACA style)
+   ===================================================== */
+
+button,
+a.button {
+  background: #1f4fd8;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:hover,
+a.button:hover {
+  background: #173ca6;
+}
+
+/* =====================================================
+   CARD PICKER – INITIAL SCREEN
+   ===================================================== */
+
+.card-picker-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.card-picker-page h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.card-picker-intro {
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+  padding: 24px 28px;
+}
+
+.card-picker-instructions {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3b4045;
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.card-picker-instructions strong {
+  font-weight: 600;
+}
+
+.card-picker-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.card-picker-actions button {
+  min-width: 100px;
+}
+
+/* =====================================================
+   CARD PICKER – GAME HEADER
+   ===================================================== */
+
+.card-picker-header {
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+  padding: 12px 20px;
+  margin-bottom: 24px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 14px;
+}
+
+.card-picker-stats {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.card-picker-actions-inline {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 700px) {
+  .game-center {
+    padding: 20px;
+  }
+
+  .game-tile {
+    grid-template-columns: 1fr;
+  }
+
+  .game-tile > :last-child {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 12px;
+  }
+
+  .card-picker-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* =====================================================
+   ROUTE TRANSITION OVERLAY (CONTENT ONLY)
+   ===================================================== */
+
+.route-transition-overlay {
+  position: absolute;     /* 🔑 NOT fixed */
+  inset: 0;
+  background: #f5f6f7;    /* same as main background */
+  z-index: 10;            /* above content, below sidebar */
+  pointer-events: none;
+}

@@ -1,0 +1,235 @@
+/* =====================================================
+   CARD HUNTER – INTRO PAGE
+   ===================================================== */
+
+.card-hunter-intro {
+  max-width: 1000px;
+  margin: 32px auto;
+  padding: 24px 28px;
+
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #2b2f33;
+}
+
+.card-hunter-intro h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.card-hunter-instructions {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3a3f45;
+  margin-bottom: 24px;
+}
+
+.card-hunter-instructions strong {
+  font-weight: 600;
+}
+
+/* =====================================================
+   GAME CONTAINER
+   ===================================================== */
+
+.card-hunter {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 32px;
+
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #2b2f33;
+}
+
+/* =====================================================
+   HEADER
+   ===================================================== */
+
+.card-hunter-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.card-hunter-restart {
+  margin-left: auto;
+  background: #1f4fd8;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.card-hunter-restart:hover {
+  background: #173ca6;
+}
+
+/* =====================================================
+   GRID
+   ===================================================== */
+
+.card-hunter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+/* =====================================================
+   TILE (CENTERED SHORT TEXT + SCROLLABLE LONG TEXT)
+   ===================================================== */
+
+.card-hunter-card {
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+
+  /* Fixed size */
+  height: 140px;
+
+  /* 🔑 Extra right padding to absorb scrollbar */
+  padding: 16px 20px 16px 16px;
+
+  display: grid;
+  place-items: center;
+
+  text-align: center;
+
+  font-size: 14px;
+  line-height: 1.5;
+  color: #2b2f33;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  box-sizing: border-box;
+
+  /* Scroll support */
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-word;
+}
+
+/* Subtle scrollbar (WebKit browsers) */
+.card-hunter-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-hunter-card::-webkit-scrollbar-thumb {
+  background-color: #c5cbd3;
+  border-radius: 4px;
+}
+
+/* =====================================================
+   HOVER (ACTIVE ONLY)
+   ===================================================== */
+
+.card-hunter-card:hover:not(.selected):not(.correct):not(.wrong):not(.disabled) {
+  background: #f3f6ff;
+  border-color: #1f4fd8;
+}
+
+/* =====================================================
+   STATES
+   ===================================================== */
+
+.card-hunter-card.selected {
+  background: #e8f0fe;
+  border-color: #1f4fd8;
+  color: #1f4fd8;
+}
+
+.card-hunter-card.correct {
+  background: #e6f4ea;
+  border-color: #2e7d32;
+  color: #1b5e20;
+  cursor: default;
+}
+
+.card-hunter-card.wrong {
+  background: #fdecea;
+  border-color: #c62828;
+  color: #8e0000;
+  cursor: default;
+}
+
+.card-hunter-card.disabled {
+  background: #f5f6f7;
+  border-color: #dcdfe3;
+  color: #9aa1a9;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* =====================================================
+   GAME OVER
+   ===================================================== */
+
+.card-hunter.game-over {
+  max-width: 420px;
+  margin: 80px auto 0;
+  padding: 32px 36px;
+
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 6px;
+
+  text-align: center;
+}
+
+.card-hunter.game-over h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.card-hunter.game-over p {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #3a3f45;
+}
+
+.card-hunter.game-over button {
+  margin-top: 16px;
+  background: #1f4fd8;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.card-hunter.game-over button:hover {
+  background: #173ca6;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 900px) {
+  .card-hunter-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .card-hunter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
