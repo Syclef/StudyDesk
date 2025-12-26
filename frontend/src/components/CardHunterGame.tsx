@@ -47,28 +47,17 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+function saveHighScore(score: number) {
+  const stored = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+  if (score > stored) {
+    localStorage.setItem(HIGH_SCORE_KEY, String(score));
+  }
+}
+
 function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-/* 🔑 LIVE SCORE (NO FREE POINTS) */
-function computeLiveScore(round: number) {
-  return Math.round(((round - 1) / MAX_ROUNDS) * 700);
-}
-
-/* 🔑 FINAL WEIGHTED SCORE (0–1000) */
-function computeFinalScore(
-  roundsCleared: number,
-  livesRemaining: number,
-  timeSeconds: number
-) {
-  const coverage = (roundsCleared / MAX_ROUNDS) * 700;
-  const lifeBonus = (livesRemaining / 3) * 200;
-  const speedBonus = Math.max(0, 100 - timeSeconds);
-
-  return Math.min(1000, Math.round(coverage + lifeBonus + speedBonus));
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 /* ================= COMPONENT ================= */
@@ -78,9 +67,11 @@ export default function CardHunterGame() {
   const [round, setRound] = useState(1);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [selected, setSelected] = useState<Tile[]>([]);
+
+  const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [gameOver, setGameOver] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   /* -------- FETCH DATA -------- */
 
@@ -94,7 +85,9 @@ export default function CardHunterGame() {
 
   useEffect(() => {
     if (gameOver) return;
-    const id = setInterval(() => setElapsed(t => t + 1), 1000);
+    const id = setInterval(() => {
+      setElapsedSeconds(s => s + 1);
+    }, 1000);
     return () => clearInterval(id);
   }, [gameOver]);
 
@@ -102,6 +95,7 @@ export default function CardHunterGame() {
 
   function buildRound(currentRound: number) {
     const tileCount = BASE_TILE_COUNT + (currentRound - 1) * 2;
+
     const correct = shuffle(flashcards)[0];
     const distractors = shuffle(
       flashcards.filter(fc => fc.id !== correct.id)
@@ -167,10 +161,7 @@ export default function CardHunterGame() {
 
     if (next.length === 2) {
       const success = next.every(t => t.isCorrect);
-
-      setTimeout(() => {
-        revealResult(success, next);
-      }, REVEAL_DELAY);
+      setTimeout(() => revealResult(success, next), REVEAL_DELAY);
     }
   }
 
@@ -184,45 +175,33 @@ export default function CardHunterGame() {
       })
     );
 
+    if (success) setScore(s => s + 100);
+    else setLives(l => l - 1);
+
     setTimeout(() => {
       if (!success) {
-        if (lives - 1 <= 0) {
-          setGameOver(true);
-        } else {
-          setLives(l => l - 1);
-          buildRound(round); // 🔑 stay in same round
-        }
+        if (lives - 1 <= 0) setGameOver(true);
+        else buildRound(round);
         return;
       }
 
-      if (round === MAX_ROUNDS) {
-        setGameOver(true);
-      } else {
-        setRound(r => r + 1);
-      }
+      if (round === MAX_ROUNDS) setGameOver(true);
+      else setRound(r => r + 1);
     }, ROUND_DELAY);
   }
 
-  /* ================= GAME OVER ================= */
+  /* ================= RENDER ================= */
 
   if (gameOver) {
-    const finalScore = computeFinalScore(
-      round - 1,
-      lives,
-      elapsed
-    );
-
-    const stored = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
-    if (finalScore > stored) {
-      localStorage.setItem(HIGH_SCORE_KEY, String(finalScore));
-    }
+    saveHighScore(score);
+    const message = shuffle(END_MESSAGES)[0];
 
     return (
       <div className="card-hunter game-over">
         <h2>Game Complete</h2>
-        <p>Score: {finalScore}</p>
-        <p>Time: {formatTime(elapsed)}</p>
-        <p>{shuffle(END_MESSAGES)[0]}</p>
+        <p>Score: {score}</p>
+        <p>Time: {formatTime(elapsedSeconds)}</p>
+        <p>{message}</p>
         <button onClick={() => window.location.reload()}>
           Start Again
         </button>
@@ -230,15 +209,13 @@ export default function CardHunterGame() {
     );
   }
 
-  /* ================= GAME UI ================= */
-
   return (
     <div className="card-hunter">
       <div className="card-hunter-header">
         <span>Round {round}</span>
         <span>Lives: {"❤️".repeat(lives)}</span>
-        <span>Score: {computeLiveScore(round)}</span>
-        <span>Time: {formatTime(elapsed)}</span>
+        <span>Score: {score}</span>
+        <span>Time: {formatTime(elapsedSeconds)}</span>
       </div>
 
       <div className="card-hunter-grid">

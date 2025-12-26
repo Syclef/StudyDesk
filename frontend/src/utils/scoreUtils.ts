@@ -1,58 +1,59 @@
-export type GameKey = "card-picker" | "card-hunter";
+/* =====================================================
+   SHARED SCORING & RANKING LOGIC (ISACA-STYLE)
+   ===================================================== */
 
-export function getHighScore(game: GameKey): number {
-  return Number(localStorage.getItem(`auditstudydesk:${game}:high-score`)) || 0;
+/* ---------- CARD PICKER ---------- */
+
+// Conservative, defensible cap per session
+export const CARD_PICKER_MAX_RAW_SCORE = 13000;
+
+export function getCardPickerWeightedScore(rawScore: number): number {
+  const weighted = (rawScore / CARD_PICKER_MAX_RAW_SCORE) * 1000;
+  return Math.min(1000, Math.round(weighted));
 }
 
-export function saveHighScore(game: GameKey, score: number) {
-  const key = `auditstudydesk:${game}:high-score`;
-  const stored = Number(localStorage.getItem(key)) || 0;
-  if (score > stored) {
-    localStorage.setItem(key, String(score));
+/* ---------- CARD HUNTER ---------- */
+
+// 6 rounds × (150 base + 50 time bonus)
+export const CARD_HUNTER_MAX_RAW_SCORE = 1200;
+
+export function getCardHunterWeightedScore(rawScore: number): number {
+  const weighted = (rawScore / CARD_HUNTER_MAX_RAW_SCORE) * 1000;
+  return Math.min(1000, Math.round(weighted));
+}
+
+/* ---------- STORAGE HELPERS ---------- */
+
+export function saveHighScore(
+  key: string,
+  rawScore: number,
+  weightedScore: number
+) {
+  const stored = JSON.parse(
+    localStorage.getItem(key) || '{"raw":0,"weighted":0}'
+  );
+
+  if (rawScore > stored.raw) {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        raw: rawScore,
+        weighted: weightedScore
+      })
+    );
   }
 }
 
-export function addHistory(
-  game: GameKey,
-  score: number,
-  time: number
-) {
-  const key = `auditstudydesk:${game}:history`;
-  const history = JSON.parse(localStorage.getItem(key) || "[]");
-
-  history.unshift({
-    score,
-    time,
-    date: new Date().toISOString()
-  });
-
-  localStorage.setItem(key, JSON.stringify(history.slice(0, 20)));
-}
-
-export function getHistory(game: GameKey) {
+export function loadHighScore(key: string): {
+  raw: number;
+  weighted: number;
+} {
   return JSON.parse(
-    localStorage.getItem(`auditstudydesk:${game}:history`) || "[]"
+    localStorage.getItem(key) || '{"raw":0,"weighted":0}'
   );
 }
 
-export function setLastPlayed(game: GameKey) {
-  localStorage.setItem(
-    `auditstudydesk:${game}:last-played`,
-    new Date().toISOString()
-  );
-}
-
-export function getLastPlayed(game: GameKey) {
-  return localStorage.getItem(`auditstudydesk:${game}:last-played`);
-}
-
-export function resetGame(game: GameKey) {
-  localStorage.removeItem(`auditstudydesk:${game}:high-score`);
-  localStorage.removeItem(`auditstudydesk:${game}:history`);
-  localStorage.removeItem(`auditstudydesk:${game}:last-played`);
-}
-
-export function resetAllGames() {
-  resetGame("card-picker");
-  resetGame("card-hunter");
+export function resetAllScores() {
+  localStorage.removeItem("auditstudydesk:card-picker");
+  localStorage.removeItem("auditstudydesk:card-hunter");
 }

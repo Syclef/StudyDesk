@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { CardGrid } from "./CardGrid";
 import "../styles/card-picker.css";
 
+import {
+  getCardPickerWeightedScore,
+  saveHighScore
+} from "../utils/scoreUtils";
+
 const INITIAL_LIVES = 3;
 const FEEDBACK_DELAY = 3000;
 const DISTRACTOR_COUNT = 5;
-const TOTAL_FLASHCARDS = 216;
-
-const HIGH_SCORE_KEY = "auditstudydesk:card-picker:high-score";
+const STORAGE_KEY = "auditstudydesk:card-picker";
 
 type Flashcard = {
   id: number;
@@ -19,62 +22,36 @@ type Props = {
   onExit: () => void;
 };
 
-function shuffle<T>(arr: T[]) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
-
-/* 🔑 FINAL WEIGHTED SCORE (END ONLY) */
-function computeFinalScore(
-  correct: number,
-  maxStreak: number,
-  livesLeft: number
-) {
-  const coverage = (correct / TOTAL_FLASHCARDS) * 600;
-  const streakBonus = Math.min(200, maxStreak * 10);
-  const lifeBonus = (livesLeft / INITIAL_LIVES) * 200;
-
-  return Math.round(coverage + streakBonus + lifeBonus);
-}
-
-/* 🔑 LIVE SCORE (NO LIFE BONUS) */
-function computeLiveScore(correct: number, maxStreak: number) {
-  const coverage = (correct / TOTAL_FLASHCARDS) * 600;
-  const streakBonus = Math.min(200, maxStreak * 10);
-  return Math.round(coverage + streakBonus);
-}
-
 export function CardPickerGame({ onExit }: Props) {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [index, setIndex] = useState(0);
   const [lives, setLives] = useState(INITIAL_LIVES);
-
-  const [correct, setCorrect] = useState(0);
+  const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [maxStreak, setMaxStreak] = useState(0);
-
   const [loading, setLoading] = useState(true);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/flashcards")
-      .then(res => res.json())
-      .then(data => {
-        setCards(shuffle(data));
-        setLoading(false);
-      });
+    async function load() {
+      const res = await fetch("http://127.0.0.1:8000/flashcards");
+      const data: Flashcard[] = await res.json();
+      setCards(shuffle(data));
+      setLoading(false);
+    }
+    load();
   }, []);
 
   const current = cards[index];
 
   const options = useMemo(() => {
     if (!current) return [];
-    return shuffle([
-      current.definition,
-      ...shuffle(
-        cards.filter(c => c.id !== current.id).map(c => c.definition)
-      ).slice(0, DISTRACTOR_COUNT)
-    ]);
+    const distractors = shuffle(
+      cards.filter(c => c.id !== current.id).map(c => c.definition)
+    ).slice(0, DISTRACTOR_COUNT);
+
+    return shuffle([current.definition, ...distractors]);
   }, [cards, current]);
 
   function handlePick(value: string) {
@@ -83,59 +60,66 @@ export function CardPickerGame({ onExit }: Props) {
     setSelected(value);
     setShowFeedback(true);
 
-    const isCorrect = value === current.definition;
+    const correct = value === current.definition;
 
-    if (isCorrect) {
-      setCorrect(c => c + 1);
-      setStreak(s => {
-        const next = s + 1;
-        setMaxStreak(m => Math.max(m, next));
-        return next;
-      });
+    if (correct) {
+      setScore(s => s + 100 + streak * 20);
+      setStreak(s => s + 1);
     } else {
       setLives(l => l - 1);
       setStreak(0);
     }
 
     setTimeout(() => {
+      if (!correct && lives - 1 <= 0) {
+        finalizeGame();
+        return;
+      }
       setIndex(i => i + 1);
       setSelected(null);
       setShowFeedback(false);
     }, FEEDBACK_DELAY);
   }
 
-  function finishGame() {
-    const finalScore = computeFinalScore(correct, maxStreak, lives);
-    const stored = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
-    if (finalScore > stored) {
-      localStorage.setItem(HIGH_SCORE_KEY, String(finalScore));
-    }
+  function finalizeGame() {
+    const weighted = getCardPickerWeightedScore(score);
+    saveHighScore(STORAGE_KEY, score, weighted);
+  }
+
+  function restartGame() {
+    finalizeGame();
+    setCards(shuffle(cards));
+    setIndex(0);
+    setLives(INITIAL_LIVES);
+    setScore(0);
+    setStreak(0);
+    setSelected(null);
+    setShowFeedback(false);
   }
 
   if (loading) {
-    return <div className="card-picker-shell">Loading…</div>;
+    return <div className="card-picker-game">Loading…</div>;
   }
 
   if (lives <= 0 || index >= cards.length) {
-    finishGame();
+    finalizeGame();
     return (
-      <div className="card-picker-shell">
-        <div className="game-over">
-          <h2>{lives <= 0 ? "Game Over" : "Deck Complete 🎉"}</h2>
-          <p>Final Score: {computeFinalScore(correct, maxStreak, lives)}</p>
-          <button onClick={() => window.location.reload()}>Restart</button>
-          <button onClick={onExit}>Back</button>
-        </div>
+      <div className="card-picker-game">
+        <h2>Game Over</h2>
+        <p>Final Score: {score}</p>
+        <button onClick={restartGame}>Restart</button>
+        <button onClick={onExit}>Back</button>
       </div>
     );
   }
 
   return (
-    <div className="card-picker-shell">
+    <div className="card-picker-game">
       <div className="game-header">
-        <div>Lives: {"❤️".repeat(lives)}</div>
-        <div>Streak: {streak}</div>
-        <div>Score: {computeLiveScore(correct, maxStreak)}</div>
+        <span>Lives: {"❤️".repeat(lives)}</span>
+        <span>Streak: {streak}</span>
+        <span>Score: {score}</span>
+        <button onClick={restartGame}>Restart</button>
       </div>
 
       <div className="main-card">{current.term}</div>
@@ -149,4 +133,8 @@ export function CardPickerGame({ onExit }: Props) {
       />
     </div>
   );
+}
+
+function shuffle<T>(arr: T[]) {
+  return [...arr].sort(() => Math.random() - 0.5);
 }
