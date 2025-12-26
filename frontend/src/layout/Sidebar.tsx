@@ -37,11 +37,6 @@ export default function Sidebar() {
           Practice
         </NavLink>
 
-        {/* ✅ SINGLE Exam Mode entry */}
-        <NavLink to="/exam" className={linkClass}>
-          Exam Mode
-        </NavLink>
-
         <NavLink to="/tests" className={linkClass}>
           Tests
         </NavLink>

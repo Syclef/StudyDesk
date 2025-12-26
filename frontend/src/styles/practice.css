@@ -1,0 +1,154 @@
+/* ===============================
+   PRACTICE MODULE
+   =============================== */
+
+.practice-dashboard {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.dashboard-block {
+  margin-bottom: 32px;
+}
+
+.metrics-row,
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.metric {
+  padding: 12px 16px;
+  border: 1px solid #dcdfe3;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.metric-label {
+  display: block;
+  font-size: 13px;
+  color: #5f6368;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ===============================
+   CATEGORY PRACTICE TABLE
+   =============================== */
+
+.category-practice {
+  margin-top: 40px;
+}
+
+.practice-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.practice-table th,
+.practice-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e0e3e7;
+  text-align: left;
+  font-size: 14px;
+}
+
+.practice-table th {
+  font-weight: 600;
+  background: #f5f6f7;
+}
+
+.action-cell {
+  text-align: right;
+}
+
+.practice-action-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid #1a73e8;
+  background: #ffffff;
+  color: #1a73e8;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.practice-action-btn:hover {
+  background: #e8f0fe;
+}
+
+/* ===============================
+   PRACTICE QUESTION VIEW
+   =============================== */
+
+.practice-question {
+  margin-top: 40px;
+}
+
+.question-header {
+  font-size: 14px;
+  color: #5f6368;
+  margin-bottom: 12px;
+}
+
+.question-stem {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.choices {
+  margin-bottom: 20px;
+}
+
+.choice {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid #dcdfe3;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.choice.selected {
+  background: #f1f3f4;
+}
+
+.choice.correct {
+  border-color: #1e8e3e;
+  background: #e6f4ea;
+}
+
+.choice.incorrect {
+  border-color: #d93025;
+  background: #fce8e6;
+}
+
+.submit-answer-btn,
+.next-question-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #1a73e8;
+  background: #1a73e8;
+  color: #ffffff;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.submit-answer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.justification-panel {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-left: 4px solid #1a73e8;
+}
