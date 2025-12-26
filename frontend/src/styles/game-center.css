@@ -18,6 +18,29 @@
 }
 
 /* =====================================================
+   RESET SCORES SECTION
+   ===================================================== */
+
+.game-center-reset {
+  margin-bottom: 20px;
+}
+
+.game-center-reset button {
+  background: #c62828;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.game-center-reset button:hover {
+  background: #a61c1c;
+}
+
+/* =====================================================
    GAME GRID (Tile layout)
    ===================================================== */
 
@@ -77,11 +100,11 @@
 }
 
 /* =====================================================
-   BUTTONS (ISACA style)
+   GAME CENTER BUTTONS (SCOPED – CRITICAL FIX)
    ===================================================== */
 
-button,
-a.button {
+.game-center button,
+.game-center a.button {
   background: #1f4fd8;
   color: #ffffff;
   border: none;
@@ -93,13 +116,21 @@ a.button {
   text-decoration: none;
 }
 
-button:hover,
-a.button:hover {
+.game-center button:hover,
+.game-center a.button:hover {
   background: #173ca6;
 }
 
+/* prevent focus flash */
+.game-center button:focus,
+.game-center button:focus-visible,
+.game-center a.button:focus,
+.game-center a.button:focus-visible {
+  outline: none;
+}
+
 /* =====================================================
-   CARD PICKER – INITIAL SCREEN
+   CARD PICKER – INITIAL SCREEN (LOCAL ONLY)
    ===================================================== */
 
 .card-picker-page {
@@ -201,9 +232,9 @@ a.button:hover {
    ===================================================== */
 
 .route-transition-overlay {
-  position: absolute;     /* 🔑 NOT fixed */
+  position: absolute; /* prevents sidebar jump */
   inset: 0;
-  background: #f5f6f7;    /* same as main background */
-  z-index: 10;            /* above content, below sidebar */
+  background: #f5f6f7;
+  z-index: 10;
   pointer-events: none;
 }
