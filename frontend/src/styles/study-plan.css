@@ -1,0 +1,229 @@
+/* ===============================
+   STUDY PLAN – BASE LAYOUT
+   =============================== */
+
+.study-plan-dashboard {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1f2937;
+}
+
+.study-plan-dashboard h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* ===============================
+   SUMMARY ROW
+   =============================== */
+
+.study-summary {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.summary-box {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+  background: #ffffff;
+}
+
+.summary-box strong {
+  font-size: 36px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.summary-box span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ===============================
+   PROGRESS PANEL
+   =============================== */
+
+.summary-progress {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.summary-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.summary-muted {
+  color: #6b7280;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #facc15;
+  border-radius: 999px;
+}
+
+.summary-progress-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.completed-groups-btn {
+  background: none;
+  border: none;
+  color: #1d4ed8;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 500;
+}
+
+.completed-groups-btn:hover {
+  text-decoration: underline;
+}
+
+/* ===============================
+   ZERO-STATE BANNER
+   =============================== */
+
+.study-banner {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+
+.study-banner strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.study-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* ===============================
+   DOMAIN / PRACTICE GROUPS
+   =============================== */
+
+.study-domains {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.domain-group {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+/* Header */
+
+.domain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.domain-header.clickable {
+  cursor: pointer;
+}
+
+.domain-header.clickable:hover {
+  background: #e5e7eb;
+}
+
+/* ===============================
+   TASK LIST
+   =============================== */
+
+.domain-tasks {
+  padding: 8px 0;
+}
+
+.domain-tasks.empty {
+  padding: 16px;
+}
+
+.task-empty {
+  font-size: 13px;
+  color: #6b7280;
+  padding-left: 16px;
+}
+
+/* Individual task rows */
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.task-row:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-icon {
+  font-size: 14px;
+}
+
+.task-title {
+  font-weight: 500;
+}
+
+.task-meta {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ===============================
+   REMOVE WEIRD FOCUS / RED OUTLINES
+   =============================== */
+
+button:focus,
+div:focus,
+span:focus {
+  outline: none;
+}

@@ -10,6 +10,10 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/node": "^25.0.3",
     "electron": "^39.2.7"
+  },
+  "dependencies": {
+    "mammoth": "^1.11.0"
   }
 }

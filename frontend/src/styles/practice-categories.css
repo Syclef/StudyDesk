@@ -1,0 +1,258 @@
+/* =========================================
+   Page background + container
+   ========================================= */
+
+body {
+  background-color: #f3f4f6;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+.pc-page {
+  padding: 24px 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  color: #1f2937;
+}
+
+/* =========================================
+   Header
+   ========================================= */
+
+.pc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pc-header-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pc-back {
+  background: none;
+  border: none;
+  color: #374151;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px 8px;
+}
+
+.pc-back:hover {
+  text-decoration: underline;
+}
+
+.pc-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pc-header-right .pc-reset {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pc-header-right .pc-reset:hover {
+  text-decoration: underline;
+}
+
+/* =========================================
+   PRACTICE TABS
+   ========================================= */
+
+.pc-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.pc-tab {
+  background: none;
+  border: none;
+  padding: 10px 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  position: relative;
+  line-height: 1.3;
+}
+
+.pc-tab:hover {
+  color: #1f2937;
+}
+
+.pc-tab--active {
+  color: #111827;
+  font-weight: 600;
+}
+
+.pc-tab--active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background-color: #2563eb;
+  border-radius: 1px;
+}
+
+/* =========================================
+   Metrics
+   ========================================= */
+
+.pc-metrics {
+  margin: 16px 0 20px 0;
+}
+
+.pc-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.pc-progress-label {
+  font-weight: 500;
+}
+
+.pc-progress-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.pc-progress-fill {
+  height: 100%;
+  background-color: #1f2a44;
+  border-radius: 999px;
+}
+
+.pc-tiles {
+  display: grid;
+  grid-template-columns: 160px repeat(5, 1fr);
+  gap: 12px;
+}
+
+.pc-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  min-height: 64px;
+}
+
+.pc-tile--primary {
+  align-items: center;
+}
+
+.pc-tile-value {
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.pc-tile-caption {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pc-tiles .pc-tile:not(.pc-tile--primary) .pc-tile-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* =========================================
+   Categories Table
+   ========================================= */
+
+.pc-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.category-table {
+  width: 100%;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Force grid alignment */
+.category-table .table-header,
+.category-table .table-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 168px 168px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-table .table-header {
+  font-weight: 600;
+  color: #374151;
+}
+
+.category-table .col-name {
+  min-width: 0;
+  text-align: left;
+  color: #111827;
+}
+
+.category-table .col-complete,
+.category-table .col-correct {
+  text-align: right !important;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.category-table .table-row:hover {
+  background-color: #f9fafb;
+}
+
+/* =========================================
+   Links & hierarchy
+   ========================================= */
+
+.category-link {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.category-link:hover {
+  text-decoration: underline;
+}
+
+/* Parent category */
+.parent-link {
+  font-weight: 600;
+}
+
+/* Child indentation */
+.child-row .col-name {
+  padding-left: 28px;
+}
+
+.child-link {
+  font-weight: 400;
+  color: #4b5563;
+}
