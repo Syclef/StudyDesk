@@ -1,45 +1,52 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-type Props = {
+interface Props {
   title: string;
   highestScore: number;
   rank: number;
   to: string;
-  lastPlayed?: string | null;
-  onReset?: () => void;
-};
+  disabled?: boolean;
+  badge?: string;
+}
 
 export function GameTile({
   title,
   highestScore,
   rank,
   to,
-  lastPlayed,
-  onReset
+  disabled = false,
+  badge
 }: Props) {
-  const navigate = useNavigate();
+  const content = (
+    <div
+      className={`game-tile ${disabled ? "disabled" : ""}`}
+      {...(disabled ? { "aria-disabled": "true" } : {})}
+    >
+      {badge && <div className="game-tile-badge">{badge}</div>}
 
-  return (
-    <div className="game-tile">
-      <h2>{title}</h2>
+      <h3 className="game-tile-title">{title}</h3>
 
-      <p><strong>Highest Score:</strong> {highestScore}</p>
-      <p><strong>Your Rank:</strong> {rank}</p>
-
-      {lastPlayed && (
-        <p className="last-played">
-          Last played: {new Date(lastPlayed).toLocaleString()}
-        </p>
-      )}
-
-      <div className="tile-actions">
-        <button onClick={() => navigate(to)}>Start Playing</button>
-        {onReset && (
-          <button className="danger" onClick={onReset}>
-            Reset
-          </button>
-        )}
+      <div className="game-tile-stats">
+        <div>
+          <span className="label">High Score</span>
+          <span className="value">{highestScore}</span>
+        </div>
+        <div>
+          <span className="label">Rank</span>
+          <span className="value">{rank}</span>
+        </div>
       </div>
     </div>
+  );
+
+  // 🔒 Disabled tiles are NOT interactive (mouse or keyboard)
+  if (disabled) {
+    return content;
+  }
+
+  return (
+    <Link to={to} className="game-tile-link">
+      {content}
+    </Link>
   );
 }

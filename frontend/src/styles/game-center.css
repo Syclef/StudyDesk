@@ -238,3 +238,29 @@
   z-index: 10;
   pointer-events: none;
 }
+
+/* =========================
+   GameTile – Disabled State
+   ========================= */
+
+.game-tile.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game-tile-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* =========================
+   Game Center – Categories
+   ========================= */
+
+.game-category {
+  margin-bottom: 32px;
+}
+
+.game-category-title {
+  margin-bottom: 12px;
+}

@@ -1,14 +1,20 @@
 import { GameTile } from "../components/GameTile";
 import "../styles/game-center.css";
+import { GAMES, GameCategory } from "../utils/games";
 import {
   loadHighScore,
   resetAllScores
 } from "../utils/scoreUtils";
 
-export default function GameCenter() {
-  const picker = loadHighScore("auditstudydesk:card-picker");
-  const hunter = loadHighScore("auditstudydesk:card-hunter");
+const CATEGORY_LABELS: Record<GameCategory, string> = {
+  speed: "Speed & Focus",
+  accuracy: "Accuracy & Mastery",
+  memory: "Memory",
+  challenge: "Challenge",
+  improvement: "Improve Weaknesses"
+};
 
+export default function GameCenter() {
   function handleReset() {
     if (
       window.confirm(
@@ -20,6 +26,20 @@ export default function GameCenter() {
     }
   }
 
+  const gamesByCategory = GAMES.reduce<Record<GameCategory, typeof GAMES>>(
+    (acc, game) => {
+      acc[game.category].push(game);
+      return acc;
+    },
+    {
+      speed: [],
+      accuracy: [],
+      memory: [],
+      challenge: [],
+      improvement: []
+    }
+  );
+
   return (
     <div className="game-center">
       <h1 className="game-center-title">Game Center</h1>
@@ -30,21 +50,40 @@ export default function GameCenter() {
         </button>
       </div>
 
-      <div className="game-grid">
-        <GameTile
-          title="Card Picker"
-          highestScore={picker.raw}
-          rank={picker.weighted}
-          to="/game-center/card-picker"
-        />
+      {Object.entries(gamesByCategory).map(([category, games]) => {
+        if (!games.length) return null;
 
-        <GameTile
-          title="Card Hunter"
-          highestScore={hunter.raw}
-          rank={hunter.weighted}
-          to="/game-center/card-hunter"
-        />
-      </div>
+        return (
+          <section
+            key={category}
+            className="game-category"
+          >
+            <h2 className="game-category-title">
+              {CATEGORY_LABELS[category as GameCategory]}
+            </h2>
+
+            <div className="game-grid">
+              {games.map(game => {
+                const score = game.enabled
+                  ? loadHighScore(`auditstudydesk:${game.id}`)
+                  : null;
+
+                return (
+                  <GameTile
+                    key={game.id}
+                    title={game.title}
+                    highestScore={score?.raw ?? 0}
+                    rank={score?.weighted ?? 0}
+                    to={game.route}
+                    disabled={!game.enabled}
+                    badge={game.comingSoon ? "Coming Soon" : undefined}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
