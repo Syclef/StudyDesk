@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import "../styles/card-hunter.css";
+import "../../styles/card-hunter.css";
 
 /* ================= TYPES ================= */
 

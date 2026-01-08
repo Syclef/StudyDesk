@@ -1,10 +1,11 @@
-import { QUESTIONS, Question } from "./questions";
+import { QUESTIONS } from "./questions";
+import { PracticeQuestion } from "./practice/types";
 
 interface StudySession {
   id: string;
   taskId: string;
   index: number;
-  questions: Question[];
+  questions: PracticeQuestion[];
 }
 
 const sessions = new Map<string, StudySession>();
@@ -12,7 +13,9 @@ const sessions = new Map<string, StudySession>();
 export function startStudySession(taskId: string) {
   const sessionId = crypto.randomUUID();
 
-  const taskQuestions = QUESTIONS.filter(q => q.taskId === taskId);
+  const taskQuestions = QUESTIONS.filter(
+    q => q.taskId === taskId
+  );
 
   sessions.set(sessionId, {
     id: sessionId,
@@ -29,13 +32,15 @@ export function getNextQuestion(sessionId: string) {
   if (!session) return null;
 
   const q = session.questions[session.index];
+  if (!q) return null;
+
   session.index++;
 
   return {
     id: q.id,
     index: session.index,
     total: session.questions.length,
-    stem: q.stem,
+    stem: q.question,
     choices: q.choices,
   };
 }

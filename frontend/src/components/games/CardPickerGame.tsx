@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { CardGrid } from "./CardGrid";
-import "../styles/card-picker.css";
+import { CardGrid } from "../CardGrid";
+import "../../styles/card-picker.css";
 
 import {
   getCardPickerWeightedScore,
   saveHighScore
-} from "../utils/scoreUtils";
+} from "../../utils/scoreUtils";
 
 const INITIAL_LIVES = 3;
 const FEEDBACK_DELAY = 3000;
@@ -22,7 +22,7 @@ type Props = {
   onExit: () => void;
 };
 
-export function CardPickerGame({ onExit }: Props) {
+export default function CardPickerGame({ onExit }: Props) {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [index, setIndex] = useState(0);
   const [lives, setLives] = useState(INITIAL_LIVES);

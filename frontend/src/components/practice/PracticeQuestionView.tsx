@@ -87,7 +87,7 @@ export function PracticeQuestionView() {
                 letter === q.correctAnswer ? "correct" : ""
               }`}
             >
-              <strong>{letter}.</strong> {q.choices[letter]}
+              {letter}. {q.choices[letter]}
             </div>
           ))}
         </div>
@@ -95,36 +95,19 @@ export function PracticeQuestionView() {
         {/* JUSTIFICATION */}
         <div className="justification-box">
           <strong>{q.correctAnswer} is the correct answer.</strong>
-
-          <h4>Justification</h4>
-
-          <p><strong>A.</strong> {q.justification.A}</p>
-          <p><strong>B.</strong> {q.justification.B}</p>
-          <p><strong>C.</strong> {q.justification.C}</p>
-          <p><strong>D.</strong> {q.justification.D}</p>
-
-          {/* META */}
-          <div className="meta-box">
-            <div>
-              <strong>Domain</strong>
-              <br />
-              {q.domain}
-            </div>
-
-            <div>
-              <strong>Knowledge Statement</strong>
-              <br />
-              {q.category}
-            </div>
-
-            {q.taskStatement && (
-              <div>
-                <strong>Task Statement</strong>
-                <br />
-                {q.taskStatement}
-              </div>
-            )}
-          </div>
+          <h4>Justification:</h4>
+          {Object.entries(q.justification).map(([choice, text]) => {
+            const isCorrect = choice === q.correctAnswer;
+            return (
+              <p
+                key={choice}
+                className={isCorrect ? "justification-correct" : "justification-item"}
+              >
+                {choice}.{" "}
+                {text.replace(/^(\*\*|\*)|(\*\*|\*)$/g, "")}
+              </p>
+              );
+          })}
         </div>
       </div>
     </div>

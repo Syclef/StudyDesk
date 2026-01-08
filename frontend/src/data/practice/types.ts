@@ -1,6 +1,7 @@
 export type ChoiceLetter = "A" | "B" | "C" | "D";
 
 export interface PracticeQuestion {
+  taskId: string;
   id: string;
 
   /** Domain shown in ISACA Perform (e.g. "1 - Information System Auditing Process") */

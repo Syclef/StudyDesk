@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import "../styles/practice-dashboard.css";
+import "../../styles/practice-dashboard.css";
 
 export default function PracticeDashboard() {
   const navigate = useNavigate();

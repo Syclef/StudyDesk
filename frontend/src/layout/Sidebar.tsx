@@ -20,7 +20,7 @@ export default function Sidebar() {
     <aside className="w-64 bg-slate-900 min-h-screen p-4">
       {/* App title */}
       <h1 className="text-xl font-bold text-white mb-6">
-        AuditStudyDesk
+        Audit Study Desk
       </h1>
 
       {/* Navigation links */}

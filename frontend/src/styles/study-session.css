@@ -1,0 +1,24 @@
+.study-session-empty {
+  padding: 32px;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1f2937;
+}
+
+.study-session-empty h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.study-session-empty p {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.study-session-empty button {
+  background: #1d4ed8;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
