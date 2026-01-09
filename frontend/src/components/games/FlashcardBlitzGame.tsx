@@ -4,6 +4,7 @@ import {
   fetchFlashcards,
   type Flashcard,
 } from "../../api/flashcards";
+import "../../styles/flashcard-blitz.css";
 
 /* ================= MODES ================= */
 
@@ -82,40 +83,29 @@ export default function FlashcardBlitzGame() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  const mode =
-    (params.get("mode") as Mode) ?? "normal";
+  const mode = (params.get("mode") as Mode) ?? "normal";
   const cfg = MODE_CONFIG[mode];
 
-  const [flashcards, setFlashcards] =
-    useState<Flashcard[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [index, setIndex] = useState(0);
 
-  const [choices, setChoices] =
-    useState<Choice[]>([]);
-  const [selected, setSelected] =
-    useState<number | null>(null);
+  const [choices, setChoices] = useState<Choice[]>([]);
+  const [selected, setSelected] = useState<number | null>(null);
 
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [wrongStreak, setWrongStreak] =
-    useState(0);
+  const [wrongStreak, setWrongStreak] = useState(0);
 
-  const [gameTimeLeft, setGameTimeLeft] =
-    useState(cfg.gameTime);
-  const [cardTimeLeft, setCardTimeLeft] =
-    useState(cfg.baseCardTime);
+  const [gameTimeLeft, setGameTimeLeft] = useState(cfg.gameTime);
+  const [cardTimeLeft, setCardTimeLeft] = useState(cfg.baseCardTime);
 
-  const [gameOver, setGameOver] =
-    useState(false);
-  const [newHighScore, setNewHighScore] =
-    useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [newHighScore, setNewHighScore] = useState(false);
 
   /* -------- LOAD FLASHCARDS -------- */
 
   useEffect(() => {
-    fetchFlashcards().then(data =>
-      setFlashcards(shuffle(data))
-    );
+    fetchFlashcards().then(data => setFlashcards(shuffle(data)));
   }, []);
 
   /* -------- GAME TIMER -------- */
@@ -128,23 +118,16 @@ export default function FlashcardBlitzGame() {
       return;
     }
 
-    const id = setInterval(
-      () => setGameTimeLeft(t => t - 1),
-      1000
-    );
-
+    const id = setInterval(() => setGameTimeLeft(t => t - 1), 1000);
     return () => clearInterval(id);
   }, [gameTimeLeft, gameOver]);
 
   /* -------- BUILD QUESTION -------- */
 
   useEffect(() => {
-    if (flashcards.length < cfg.optionCount)
-      return;
+    if (flashcards.length < cfg.optionCount) return;
 
-    const correct =
-      flashcards[index % flashcards.length];
-
+    const correct = flashcards[index % flashcards.length];
     const distractors = shuffle(
       flashcards.filter(fc => fc.id !== correct.id)
     ).slice(0, cfg.optionCount - 1);
@@ -160,11 +143,8 @@ export default function FlashcardBlitzGame() {
     );
 
     setSelected(null);
-    setCardTimeLeft(
-      cfg.baseCardTime +
-        combo * cfg.comboBonus
-    );
-  }, [index, flashcards]);
+    setCardTimeLeft(cfg.baseCardTime + combo * cfg.comboBonus);
+  }, [index, flashcards, cfg, combo]);
 
   /* -------- PER-CARD TIMER -------- */
 
@@ -172,18 +152,13 @@ export default function FlashcardBlitzGame() {
     if (gameOver) return;
 
     if (cardTimeLeft <= 0) {
-      // ⛔ Missed → zero points, move on
       setCombo(0);
       setWrongStreak(w => w + 1);
       setIndex(i => i + 1);
       return;
     }
 
-    const id = setInterval(
-      () => setCardTimeLeft(t => t - 1),
-      1000
-    );
-
+    const id = setInterval(() => setCardTimeLeft(t => t - 1), 1000);
     return () => clearInterval(id);
   }, [cardTimeLeft, gameOver]);
 
@@ -195,23 +170,15 @@ export default function FlashcardBlitzGame() {
     setSelected(i);
 
     if (choices[i].correct) {
-      setScore(
-        s => s + 10 + combo * 2
-      );
+      setScore(s => s + 10 + combo * 2);
       setCombo(c => c + 1);
       setWrongStreak(0);
     } else {
       setCombo(0);
       setWrongStreak(w => {
         const next = w + 1;
-
-        if (
-          next % 2 === 0 &&
-          cfg.timePenalty > 0
-        ) {
-          setGameTimeLeft(t =>
-            Math.max(0, t - cfg.timePenalty)
-          );
+        if (next % 2 === 0 && cfg.timePenalty > 0) {
+          setGameTimeLeft(t => Math.max(0, t - cfg.timePenalty));
         }
         return next;
       });
@@ -223,10 +190,7 @@ export default function FlashcardBlitzGame() {
   }
 
   function endGame() {
-    const isNew = saveHighScore(
-      mode,
-      score
-    );
+    const isNew = saveHighScore(mode, score);
     setNewHighScore(isNew);
     setGameOver(true);
   }
@@ -235,64 +199,93 @@ export default function FlashcardBlitzGame() {
 
   if (gameOver) {
     return (
-      <div className="game-over">
-        <h2>Game Complete</h2>
-        {newHighScore && (
-          <p>🎉 New High Score!</p>
-        )}
-        <p>Mode: {mode}</p>
-        <p>Score: {score}</p>
+      <div className="blitz-shell">
+        <div className="blitz-game-over">
+          <h2 className="title-gradient">Blitz Complete</h2>
+          {newHighScore && <div className="blitz-high-score-badge">🎉 New High Score!</div>}
+          
+          <div className="stats-display stats-display-margin">
+            <div className="stat-box">
+              <p>{score}</p>
+              <small>Final Score</small>
+            </div>
+          </div>
 
-        <button
-          onClick={() =>
-            navigate("/game-center")
-          }
-        >
-          Back to Game Center
-        </button>
+          <p className="blitz-mode-text">
+            Mode: <strong>{mode.toUpperCase()}</strong>
+          </p>
+
+          <div className="game-intro-actions game-intro-actions-styled">
+            <button className="btn btn-primary btn-primary-full-width" onClick={() => window.location.reload()}>
+              Play Again
+            </button>
+            <button className="btn btn-secondary btn-secondary-full-width" onClick={() => navigate("/game-center")}>
+              Back to Game Center
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const card =
-    flashcards[index % flashcards.length];
+  const card = flashcards[index % flashcards.length];
 
   return (
-    <div className="flashcard-blitz">
-      <div className="flashcard-blitz-header">
-        <span>Mode: {mode}</span>
-        <span>Score: {score}</span>
-        <span>🔥 Combo: {combo}</span>
-        <span>
-          ⏳ {formatTime(gameTimeLeft)}
-        </span>
+    <div className="blitz-shell">
+      <div className="blitz-header">
+        <div className="blitz-stat-item">
+          <span className="blitz-stat-label">Mode</span>
+          <span className="blitz-stat-value">{mode}</span>
+        </div>
+        <div className="blitz-stat-item">
+          <span className="blitz-stat-label">Score</span>
+          <span className="blitz-stat-value">{score}</span>
+        </div>
+        <div className="blitz-stat-item">
+          <span className="blitz-stat-label">Combo</span>
+          <span className="blitz-stat-value blitz-combo-highlight">🔥 {combo}</span>
+        </div>
+        <div className="blitz-stat-item">
+          <span className="blitz-stat-label">Game Time</span>
+          <span className={`blitz-stat-value ${gameTimeLeft <= 10 ? 'urgent' : ''}`}>
+             {formatTime(gameTimeLeft)}
+          </span>
+        </div>
       </div>
 
-      <div className="flashcard-blitz-card">
-        <p>{card?.definition}</p>
-        <small>
-          Answer in {cardTimeLeft}s
-        </small>
+      <div className="blitz-question-card">
+        <p className="blitz-question-text">{card?.definition}</p>
+        <div className="blitz-card-timer">
+          Remaining: {cardTimeLeft}s
+        </div>
       </div>
 
-      <div className="flashcard-blitz-choices">
-        {choices.map((c, i) => (
-          <button
-            key={i}
-            disabled={selected !== null}
-            onClick={() => handleSelect(i)}
-          >
-            {c.text}
-          </button>
-        ))}
+      <div className="blitz-grid">
+        {choices.map((c, i) => {
+          let feedbackClass = "";
+          if (selected !== null) {
+            if (c.correct) feedbackClass = "selected-correct";
+            else if (selected === i) feedbackClass = "selected-wrong";
+          }
+
+          return (
+            <button
+              key={i}
+              className={`blitz-choice-btn ${feedbackClass}`}
+              disabled={selected !== null}
+              onClick={() => handleSelect(i)}
+            >
+              {c.text}
+            </button>
+          );
+        })}
       </div>
 
-      <button
-        className="btn secondary"
-        onClick={endGame}
-      >
-        End Game
-      </button>
+      <div className="end-game-container">
+        <button className="btn btn-secondary" onClick={endGame}>
+          End Game
+        </button>
+      </div>
     </div>
   );
 }

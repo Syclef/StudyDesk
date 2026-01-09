@@ -25,6 +25,7 @@ import GameCenter from "../pages/Games/GameCenter";
 import CardHunterPage from "../pages/Games/CardHunterPage";
 import CardPickerPage from "../pages/Games/CardPickerPage";
 import FlashcardBlitzPage from "../pages/Games/FlashcardBlitzPage";
+import TimeAttackPage from "../pages/Games/TimeAttackPage";
 
 /* -----------------------------
    App Routes
@@ -33,7 +34,6 @@ import FlashcardBlitzPage from "../pages/Games/FlashcardBlitzPage";
 function AppRoutes() {
   return (
     <Routes>
-      {/* All routes use dashboard layout */}
       <Route element={<DashboardLayout />}>
 
         {/* CORE */}
@@ -52,7 +52,10 @@ function AppRoutes() {
 
         {/* PRACTICE */}
         <Route path="/practice" element={<PracticeDashboard />} />
-        <Route path="/practice/categories" element={<PracticeCategories />} />
+        <Route
+          path="/practice/categories"
+          element={<PracticeCategories />}
+        />
         <Route
           path="/practice/session/:category"
           element={<PracticeQuestionView />}
@@ -63,33 +66,36 @@ function AppRoutes() {
         <Route path="/flashcards" element={<Flashcards />} />
 
         {/* =========================
-           GAMES (CLEAN & CONSISTENT)
+           GAMES
            ========================= */}
         <Route path="/game-center" element={<GamesLayout />}>
           <Route index element={<GameCenter />} />
 
-          {/* Card Hunter (Page handles instructions + game) */}
           <Route
             path="card-hunter"
             element={<CardHunterPage />}
           />
 
-          {/* Card Picker (Page handles instructions + game) */}
           <Route
             path="card-picker"
             element={<CardPickerPage />}
           />
 
-          {/* Flashcard Blitz (still single file for now) */}
           <Route
             path="flashcard-blitz"
             element={<FlashcardBlitzPage />}
+          />
+
+          <Route
+            path="time-attack"
+            element={<TimeAttackPage />}
           />
         </Route>
 
         {/* OTHER */}
         <Route path="/resources" element={<Resources />} />
         <Route path="/review" element={<Review />} />
+
       </Route>
     </Routes>
   );

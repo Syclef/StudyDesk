@@ -52,8 +52,8 @@ export const GAMES: GameDefinition[] = [
     description: "Answer as many questions as possible before time runs out.",
     category: "speed",
     route: "/game-center/time-attack",
-    enabled: false,
-    badge: "Coming Soon",
+    enabled: true,
+    scoreKey: "auditstudydesk:time-attack:high-score",
   },
 
   {

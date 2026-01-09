@@ -1,5 +1,8 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
+import FlashcardBlitzGame from "../../components/games/FlashcardBlitzGame";
+// Ensure the blitz styles are available for the intro page as well
+import "../../styles/flashcard-blitz.css";
 
 type Mode = "easy" | "normal" | "hard";
 
@@ -18,12 +21,14 @@ const MODE_INFO: Record<
   },
   normal: {
     label: "Normal",
-    description: "7 seconds per card. Combo adds time. Wrong answers reduce game time.",
+    description:
+      "7 seconds per card. Combo adds time. Wrong answers reduce game time.",
     scoreKey: "auditstudydesk:flashcard-blitz:normal",
   },
   hard: {
     label: "Hard",
-    description: "5 seconds per card. More options. Heavy time penalties.",
+    description:
+      "5 seconds per card. More options. Heavy time penalties.",
     scoreKey: "auditstudydesk:flashcard-blitz:hard",
   },
 };
@@ -35,29 +40,43 @@ function getHighScore(key: string): number | null {
 
 export default function FlashcardBlitzPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("normal");
+  const [searchParams] = useSearchParams();
 
+  const modeFromUrl = searchParams.get("mode") as Mode | null;
+  const [selectedMode, setSelectedMode] = useState<Mode>("normal");
+
+  /* =========================
+      GAME VIEW
+      ========================= */
+  if (modeFromUrl) {
+    return (
+      <div className="blitz-page-wrapper">
+        <FlashcardBlitzGame />
+      </div>
+    );
+  }
+
+  /* =========================
+      INSTRUCTIONS VIEW
+      ========================= */
   return (
     <div className="game-intro-page">
       <div className="game-intro-card">
-        <h2>Flashcard Blitz</h2>
+        <h2 className="title-gradient">Flashcard Blitz</h2>
 
         <div className="game-intro-text">
-          <strong>Instructions:</strong>
-          <p>
-            A definition is shown with multiple terms underneath. You must choose
-            the correct term before time runs out. Speed is key, but precision is everything!
+          <p className="subtitle">
+            A rapid-fire challenge to test your split-second recall. 
+            Choose the correct term for the definition before the clock runs out.
           </p>
         </div>
 
-        <ul className="game-intro-list">
-          <li>1-minute rapid-fire round</li>
-          <li>Forced recall under time pressure</li>
-          <li>Combos reward accuracy and build your score</li>
-          <li>Mistakes may reduce your remaining game time</li>
-        </ul>
+        <div className="instructions-list instructions-list-styled">
+          <div className="inst-item">⏳ <span>1-minute high-pressure rounds</span></div>
+          <div className="inst-item">🔥 <span>Combos reward speed with bonus time</span></div>
+          <div className="inst-item">⚠️ <span>Inaccurate answers penalize your total time</span></div>
+        </div>
 
-        {/* MODE SELECTOR */}
         <h3 className="game-category-title margin-top-24">
           Select Difficulty
         </h3>
@@ -65,16 +84,19 @@ export default function FlashcardBlitzPage() {
         <div className="game-mode-selector">
           {(Object.keys(MODE_INFO) as Mode[]).map((m) => {
             const best = getHighScore(MODE_INFO[m].scoreKey);
+            const isActive = selectedMode === m;
 
             return (
               <button
                 key={m}
-                className={`mode-card ${mode === m ? "active" : ""}`}
-                onClick={() => setMode(m)}
+                className={`mode-card ${isActive ? "active" : ""}`}
+                onClick={() => setSelectedMode(m)}
               >
-                <strong>{MODE_INFO[m].label}</strong>
+                <div className="mode-card-header">
+                   <strong>{MODE_INFO[m].label}</strong>
+                   {isActive && <span className="active-check">✓</span>}
+                </div>
                 <p>{MODE_INFO[m].description}</p>
-
                 <div className="mode-score">
                   Best Score: <span>{best === null ? "—" : best}</span>
                 </div>
@@ -83,12 +105,13 @@ export default function FlashcardBlitzPage() {
           })}
         </div>
 
-        {/* ACTIONS */}
-        <div className="game-intro-actions">
+        <div className="game-intro-actions margin-top-40">
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-primary-custom"
             onClick={() =>
-              navigate(`/game-center/flashcard-blitz/play?mode=${mode}`)
+              navigate(
+                `/game-center/flashcard-blitz?mode=${selectedMode}`
+              )
             }
           >
             Start Playing

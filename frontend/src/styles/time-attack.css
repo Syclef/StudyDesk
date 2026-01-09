@@ -1,0 +1,151 @@
+/* =====================================================
+   TIME ATTACK SPECIFIC STYLES
+   ===================================================== */
+
+.time-attack-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* =====================================================
+   ONBOARDING / INTRO
+   ===================================================== */
+
+.onboarding-card {
+  max-width: 600px;
+  margin: 60px auto;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 48px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+}
+
+.title-gradient {
+  font-size: 36px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.instructions-list {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 24px 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inst-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #475569;
+}
+
+/* =====================================================
+   DURATION BUTTONS
+   ===================================================== */
+
+.duration-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-time {
+  padding: 16px 0;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-time:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.btn-easy { background: #3b82f6; }
+.btn-med  { background: #f59e0b; }
+.btn-hard { background: #ef4444; }
+
+/* =====================================================
+   ACTION AREA
+   ===================================================== */
+
+.action-area {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* =====================================================
+   GAMIFIED COUNTDOWN OVERLAY
+   ===================================================== */
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(30, 41, 59, 0.85),
+    rgba(15, 23, 42, 0.95)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Big countdown number */
+.zoom-text {
+  font-size: 140px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow:
+    0 0 20px rgba(59, 130, 246, 0.6),
+    0 0 40px rgba(59, 130, 246, 0.4);
+  animation: countdownPulse 0.8s ease-in-out;
+}
+
+/* Pulse + impact animation */
+@keyframes countdownPulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Optional "GET READY" feel */
+.countdown-overlay::after {
+  content: "GET READY";
+  position: absolute;
+  bottom: 15%;
+  font-size: 14px;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
