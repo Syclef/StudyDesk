@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import "../../styles/card-hunter.css";
+import {
+  fetchFlashcards,
+  type Flashcard
+} from "../../api/flashcards";
 
 /* ================= TYPES ================= */
-
-type Flashcard = {
-  id: string;
-  term: string;
-  definition: string;
-};
 
 type TileStatus =
   | "idle"
@@ -33,18 +31,15 @@ const ROUND_DELAY = 1400;
 
 const HIGH_SCORE_KEY = "auditstudydesk:card-hunter:high-score";
 
-const END_MESSAGES = [
-  "Cool! Try again!",
-  "Nice run!",
-  "Well played!",
-  "Good effort!",
-  "Keep sharpening your skills!"
-];
-
 /* ================= HELPERS ================= */
 
-function shuffle<T>(arr: T[]): T[] {
-  return [...arr].sort(() => Math.random() - 0.5);
+function shuffle<T>(input: T[]): T[] {
+  const arr = [...input];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function saveHighScore(score: number) {
@@ -64,53 +59,65 @@ function formatTime(seconds: number) {
 
 export default function CardHunterGame() {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [round, setRound] = useState(1);
+  const [cardIndex, setCardIndex] = useState(0);
+
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [selected, setSelected] = useState<Tile[]>([]);
 
+  const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
-  const [gameOver, setGameOver] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  /* -------- FETCH DATA -------- */
+  const [gameOver, setGameOver] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  /* -------- LOAD FLASHCARDS -------- */
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/flashcards")
-      .then(res => res.json())
-      .then((data: Flashcard[]) => setFlashcards(data));
+    async function load() {
+      const data = await fetchFlashcards();
+      setFlashcards(shuffle(data));
+      setCardIndex(0);
+      setLoading(false);
+    }
+    load();
   }, []);
 
   /* -------- TIMER -------- */
 
   useEffect(() => {
-    if (gameOver) return;
-    const id = setInterval(() => {
-      setElapsedSeconds(s => s + 1);
-    }, 1000);
+    if (loading || gameOver) return;
+    const id = setInterval(
+      () => setElapsedSeconds(t => t + 1),
+      1000
+    );
     return () => clearInterval(id);
-  }, [gameOver]);
+  }, [loading, gameOver]);
 
   /* -------- BUILD ROUND -------- */
 
-  function buildRound(currentRound: number) {
-    const tileCount = BASE_TILE_COUNT + (currentRound - 1) * 2;
+  function buildRound(r: number, index: number) {
+    const tileCount =
+      BASE_TILE_COUNT + (r - 1) * 2;
 
-    const correct = shuffle(flashcards)[0];
-    const distractors = shuffle(
-      flashcards.filter(fc => fc.id !== correct.id)
+    const correct =
+      flashcards[index % flashcards.length];
+
+    const distractors = flashcards.filter(
+      fc => fc.id !== correct.id
     );
 
-    const baseTiles: Tile[] = [
+    const newTiles: Tile[] = [
       {
-        id: `term-${currentRound}`,
+        id: `term-${r}`,
         text: correct.term,
         type: "term",
         isCorrect: true,
         status: "idle"
       },
       {
-        id: `def-${currentRound}`,
+        id: `def-${r}`,
         text: correct.definition,
         type: "definition",
         isCorrect: true,
@@ -118,41 +125,45 @@ export default function CardHunterGame() {
       }
     ];
 
-    const fillers = shuffle(
+    shuffle(
       distractors.flatMap(fc => [
         { text: fc.term, type: "term" as const },
         { text: fc.definition, type: "definition" as const }
       ])
-    ).slice(0, tileCount - 2);
+    )
+      .slice(0, tileCount - 2)
+      .forEach((f, i) =>
+        newTiles.push({
+          id: `x-${r}-${i}`,
+          text: f.text,
+          type: f.type,
+          isCorrect: false,
+          status: "idle"
+        })
+      );
 
-    fillers.forEach((f, i) => {
-      baseTiles.push({
-        id: `x-${currentRound}-${i}`,
-        text: f.text,
-        type: f.type,
-        isCorrect: false,
-        status: "idle"
-      });
-    });
-
-    setTiles(shuffle(baseTiles));
+    setTiles(shuffle(newTiles));
     setSelected([]);
   }
 
+  /* -------- INITIAL ROUND -------- */
+
   useEffect(() => {
-    if (flashcards.length === 0 || round > MAX_ROUNDS) return;
-    buildRound(round);
-  }, [flashcards, round]);
+    if (!loading && flashcards.length >= 2) {
+      buildRound(1, 0);
+    }
+  }, [loading, flashcards]);
 
   /* -------- CLICK LOGIC -------- */
 
   function handleClick(tile: Tile) {
-    if (tile.status !== "idle") return;
-    if (selected.length === 2) return;
+    if (tile.status !== "idle" || selected.length === 2) return;
 
-    setTiles(prev =>
-      prev.map(t =>
-        t.id === tile.id ? { ...t, status: "selected" } : t
+    setTiles(t =>
+      t.map(x =>
+        x.id === tile.id
+          ? { ...x, status: "selected" }
+          : x
       )
     );
 
@@ -161,47 +172,65 @@ export default function CardHunterGame() {
 
     if (next.length === 2) {
       const success = next.every(t => t.isCorrect);
-      setTimeout(() => revealResult(success, next), REVEAL_DELAY);
+      setTimeout(() => reveal(success), REVEAL_DELAY);
     }
   }
 
-  function revealResult(success: boolean, picks: Tile[]) {
-    setTiles(prev =>
-      prev.map(t => {
-        if (t.isCorrect) return { ...t, status: "correct" };
-        if (!success && picks.some(p => p.id === t.id))
-          return { ...t, status: "wrong" };
-        return { ...t, status: "disabled" };
-      })
+  /* -------- RESULT LOGIC (FIXED) -------- */
+
+  function reveal(success: boolean) {
+    setTiles(t =>
+      t.map(x =>
+        x.isCorrect
+          ? { ...x, status: "correct" }
+          : success
+          ? { ...x, status: "disabled" }
+          : { ...x, status: "wrong" }
+      )
     );
 
-    if (success) setScore(s => s + 100);
-    else setLives(l => l - 1);
-
     setTimeout(() => {
+      /* ❌ WRONG ANSWER → LOSE LIFE, SAME ROUND */
       if (!success) {
-        if (lives - 1 <= 0) setGameOver(true);
-        else buildRound(round);
+        setLives(l => {
+          const nextLives = l - 1;
+          if (nextLives <= 0) {
+            setGameOver(true);
+            return 0;
+          }
+          buildRound(round, cardIndex);
+          return nextLives;
+        });
         return;
       }
 
-      if (round === MAX_ROUNDS) setGameOver(true);
-      else setRound(r => r + 1);
+      /* ✅ CORRECT ANSWER → ADVANCE */
+      setScore(s => s + 100);
+
+      if (round === MAX_ROUNDS) {
+        setGameOver(true);
+      } else {
+        const nextRound = round + 1;
+        const nextIndex = cardIndex + 1;
+
+        setRound(nextRound);
+        setCardIndex(nextIndex);
+        buildRound(nextRound, nextIndex);
+      }
     }, ROUND_DELAY);
   }
 
   /* ================= RENDER ================= */
 
+  if (loading) return <div>Loading…</div>;
+
   if (gameOver) {
     saveHighScore(score);
-    const message = shuffle(END_MESSAGES)[0];
-
     return (
       <div className="card-hunter game-over">
         <h2>Game Complete</h2>
         <p>Score: {score}</p>
         <p>Time: {formatTime(elapsedSeconds)}</p>
-        <p>{message}</p>
         <button onClick={() => window.location.reload()}>
           Start Again
         </button>
@@ -224,7 +253,6 @@ export default function CardHunterGame() {
             key={tile.id}
             className={`card-hunter-card ${tile.status}`}
             onClick={() => handleClick(tile)}
-            disabled={tile.status === "disabled"}
           >
             {tile.text}
           </button>

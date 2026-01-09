@@ -2,7 +2,6 @@ import {
   BrowserRouter,
   Routes,
   Route,
-  useNavigate,
 } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 
@@ -12,7 +11,6 @@ import StudyPlan from "../pages/StudyPlan/StudyPlanPage";
 import StudySessionPage from "../pages/StudyPlan/StudySessionPage";
 import Tests from "../pages/Tests/TestsPage";
 import Flashcards from "../pages/Flashcards";
-import GameCenter from "../pages/GameCenter";
 import Resources from "../pages/Resources";
 import Review from "../pages/Review";
 
@@ -22,23 +20,11 @@ import PracticeCategories from "../pages/Practice/PracticeCategories";
 import { PracticeQuestionView } from "../components/practice/PracticeQuestionView";
 
 /* Games */
-import CardPickerGame from "../components/games/CardPickerGame";
-import CardHunterGame from "../components/games/CardHunterGame";
-
-/* -----------------------------
-   Game Route Wrappers
-   ----------------------------- */
-
-/**
- * CardPicker REQUIRES onExit → wrap it
- */
-function CardPickerRoute() {
-  const navigate = useNavigate();
-
-  return (
-    <CardPickerGame onExit={() => navigate("/game-center")} />
-  );
-}
+import GamesLayout from "../pages/Games/GamesLayout";
+import GameCenter from "../pages/Games/GameCenter";
+import CardHunterPage from "../pages/Games/CardHunterPage";
+import CardPickerPage from "../pages/Games/CardPickerPage";
+import FlashcardBlitzPage from "../pages/Games/FlashcardBlitzPage";
 
 /* -----------------------------
    App Routes
@@ -49,13 +35,12 @@ function AppRoutes() {
     <Routes>
       {/* All routes use dashboard layout */}
       <Route element={<DashboardLayout />}>
-        {/* Core */}
+
+        {/* CORE */}
         <Route path="/" element={<CourseHome />} />
 
         {/* STUDY PLAN */}
         <Route path="/study-plan" element={<StudyPlan />} />
-
-        {/* Study Session (support BOTH paths) */}
         <Route
           path="/study/session/:task"
           element={<StudySessionPage />}
@@ -65,7 +50,7 @@ function AppRoutes() {
           element={<StudySessionPage />}
         />
 
-        {/* PRACTICE (ISACA FLOW) */}
+        {/* PRACTICE */}
         <Route path="/practice" element={<PracticeDashboard />} />
         <Route path="/practice/categories" element={<PracticeCategories />} />
         <Route
@@ -77,17 +62,32 @@ function AppRoutes() {
         <Route path="/tests" element={<Tests />} />
         <Route path="/flashcards" element={<Flashcards />} />
 
-        {/* GAME CENTER */}
-        <Route path="/game-center" element={<GameCenter />} />
-        <Route
-          path="/game-center/card-picker"
-          element={<CardPickerRoute />}
-        />
-        <Route
-          path="/game-center/card-hunter"
-          element={<CardHunterGame />}
-        />
+        {/* =========================
+           GAMES (CLEAN & CONSISTENT)
+           ========================= */}
+        <Route path="/game-center" element={<GamesLayout />}>
+          <Route index element={<GameCenter />} />
 
+          {/* Card Hunter (Page handles instructions + game) */}
+          <Route
+            path="card-hunter"
+            element={<CardHunterPage />}
+          />
+
+          {/* Card Picker (Page handles instructions + game) */}
+          <Route
+            path="card-picker"
+            element={<CardPickerPage />}
+          />
+
+          {/* Flashcard Blitz (still single file for now) */}
+          <Route
+            path="flashcard-blitz"
+            element={<FlashcardBlitzPage />}
+          />
+        </Route>
+
+        {/* OTHER */}
         <Route path="/resources" element={<Resources />} />
         <Route path="/review" element={<Review />} />
       </Route>
