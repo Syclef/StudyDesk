@@ -19,7 +19,7 @@ export const GAMES: GameDefinition[] = [
   {
     id: "card-hunter",
     title: "Card Hunter",
-    description: "Match terms and definitions under pressure.",
+    description: "A high-stakes memory gauntlet. Identify the matching pairs and survive the rising difficulty. You have 3 lives to conquer the deck—how deep into the rounds can you go",
     category: "memory",
     route: "/game-center/card-hunter",
     enabled: true,
@@ -29,7 +29,7 @@ export const GAMES: GameDefinition[] = [
   {
     id: "card-picker",
     title: "Card Picker",
-    description: "Pick the correct answer as fast as you can.",
+    description: "The ultimate test of accuracy. Navigate through the flashcard deck with only 3 lives to spare. Every mistake brings you closer to defeat—how many cards can you clear before your health runs out?",
     category: "speed",
     route: "/game-center/card-picker",
     enabled: true,
@@ -39,7 +39,7 @@ export const GAMES: GameDefinition[] = [
   {
     id: "flashcard-blitz",
     title: "Flashcard Blitz",
-    description: "Rapid-fire recall with a ticking clock.",
+    description: "Rapid-fire recall under pressure! Choose the right term before the fuse runs out. Build your combo to boost your score, but beware: every mistake eats away at your remaining time. Speed is key, but precision is everything.",
     category: "speed",
     route: "/game-center/flashcard-blitz",
     enabled: true,

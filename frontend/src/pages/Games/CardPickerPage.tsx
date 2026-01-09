@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CardPickerGame from "../../components/games/CardPickerGame";
-import "../../styles/card-picker.css";
+import CardPickerGame, { INITIAL_LIVES } from "../../components/games/CardPickerGame";
+import "../../styles/game-center.css"; 
 
 export default function CardPickerPage() {
   const navigate = useNavigate();
@@ -10,36 +10,40 @@ export default function CardPickerPage() {
   /* =========================
      INSTRUCTIONS SCREEN
      ========================= */
-
   if (!started) {
     return (
-      <div className="card-picker-page">
-        <div className="card-picker-intro">
+      <div className="game-intro-page">
+        <div className="game-intro-card">
           <h2>Card Picker</h2>
 
-          <p className="card-picker-instructions">
-            <strong>Instructions:</strong><br />
-            You will be shown a question and multiple answer cards.
-            Your task is to pick the correct answer as quickly as possible.
-            <br /><br />
-            • Faster answers earn more points  
-            • Wrong answers reduce your score  
-            • Difficulty increases as you progress  
-            • Try to achieve the highest score possible  
-            <br /><br />
-            Think fast and choose wisely!
+          <div className="game-intro-text">
+            <strong>Instructions:</strong>
+            <p>
+              Match the term shown at the top with the correct definition from the cards below. 
+              Keep your streak alive to maximize your bonus points!
+            </p>
+          </div>
+
+          <ul className="game-intro-list">
+            <li>Each correct answer adds to your score</li>
+            <li>You have {INITIAL_LIVES} lives—don't lose them!</li>
+            <li>The game ends if you run out of lives or cards</li>
+          </ul>
+
+          <p className="game-intro-text intro-text-margin">
+            Ready to test your knowledge?
           </p>
 
-          <div className="card-picker-actions">
+          <div className="game-intro-actions">
             <button
-              className="btn primary"
+              className="btn btn-primary"
               onClick={() => setStarted(true)}
             >
               Start Playing
             </button>
 
             <button
-              className="btn secondary"
+              className="btn btn-secondary"
               onClick={() => navigate("/game-center")}
             >
               Back to Game Center
@@ -51,12 +55,7 @@ export default function CardPickerPage() {
   }
 
   /* =========================
-     GAME ENGINE
+     ACTUAL GAME SCREEN
      ========================= */
-
-  return (
-    <CardPickerGame
-      onExit={() => navigate("/game-center")}
-    />
-  );
+  return <CardPickerGame onExit={() => navigate("/game-center")} />;
 }

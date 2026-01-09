@@ -1,47 +1,54 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CardHunterGame from "../../components/games/CardHunterGame";
-import "../../styles/card-hunter.css";
+/* Using the unified game-center styles for consistency */
+import "../../styles/game-center.css";
 
 export default function CardHunterPage() {
   const navigate = useNavigate();
   const [started, setStarted] = useState(false);
 
   /* =========================
-     INSTRUCTIONS SCREEN
-     ========================= */
+      INSTRUCTIONS SCREEN
+      ========================= */
 
   if (!started) {
     return (
-      <div className="card-hunter-shell">
-        <div className="card-hunter-intro">
+      <div className="game-intro-page">
+        <div className="game-intro-card">
           <h2>Card Hunter</h2>
 
-          <p className="card-hunter-instructions">
-            <strong>Instructions:</strong>  
-            The goal is to find the matching pair of cards in each round.
-            One card shows a term and another shows its definition.
-            <br /><br />
-            • The first round starts with 4 cards  
-            • Each successful round adds 2 more cards  
-            • Pick the correct pair to advance  
-            • A wrong match costs a life and restarts the round  
-            • The game ends when you lose all lives or finish all rounds  
-            <br /><br />
-            Score increases with each correct match.
-            Try to reach the highest round with the best score!
+          <div className="game-intro-text">
+            <strong>Instructions:</strong>
+            <p>
+              The goal is to find the matching pair of cards in each round. 
+              One card shows a term and another shows its definition. 
+              Precision and memory are your best tools!
+            </p>
+          </div>
+
+          <ul className="game-intro-list">
+            <li>The first round starts with 4 cards</li>
+            <li>Each successful round adds 2 more cards to the board</li>
+            <li>Pick the correct pair to advance to the next level</li>
+            <li>A wrong match costs a life and restarts the current round</li>
+            <li>The game ends when you lose all lives or finish all rounds</li>
+          </ul>
+
+          <p className="game-intro-text score-text">
+            Score increases with each correct match. Try to reach the highest round!
           </p>
 
-          <div className="card-hunter-actions">
+          <div className="game-intro-actions">
             <button
-              className="btn primary"
+              className="btn btn-primary"
               onClick={() => setStarted(true)}
             >
               Start Playing
             </button>
 
             <button
-              className="btn secondary"
+              className="btn btn-secondary"
               onClick={() => navigate("/game-center")}
             >
               Back to Game Center
@@ -53,8 +60,8 @@ export default function CardHunterPage() {
   }
 
   /* =========================
-     GAME ENGINE
-     ========================= */
+      GAME ENGINE
+      ========================= */
 
   return <CardHunterGame />;
 }

@@ -7,7 +7,7 @@ import {
   saveHighScore
 } from "../../utils/scoreUtils";
 
-const INITIAL_LIVES = 3;
+export const INITIAL_LIVES = 3;
 const FEEDBACK_DELAY = 3000;
 const DISTRACTOR_COUNT = 5;
 const STORAGE_KEY = "auditstudydesk:card-picker";
@@ -29,9 +29,9 @@ export default function CardPickerGame({ onExit }: Props) {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
-
   const [selected, setSelected] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+
 
   useEffect(() => {
     async function load() {
