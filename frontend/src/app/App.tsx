@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 
 /* Main Pages */
-import CourseHome from "../pages/CourseHome";
+import CourseHome from "../pages/Dashboard/Dashboard";
 import StudyPage from "../pages/Study/StudyPage"; // Renamed from StudyPlan
 import PracticeDashboard from "../pages/Practice/PracticeDashboard";
 import MockExamsPage from "../pages/MockExams/MockExamsPage"; // Renamed from Tests

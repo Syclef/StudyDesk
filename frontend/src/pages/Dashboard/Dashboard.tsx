@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ReadinessGauge from "../components/Gauges/ReadinessGauge";
-import { STUDY_TASKS } from "../data/studyTasks";
-import { getAllSessions } from "../data/studySessions";
-import { calculateStudyMetrics } from "../utils/studyLogic";
+import ReadinessGauge from "../../components/gauges/ReadinessGauge";
+import { STUDY_TASKS } from "../../data/studyTasks";
+import { getAllSessions } from "../../data/studySessions";
+import { calculateStudyMetrics } from "../../utils/studyLogic";
 import "../styles/course-home.css";
 
 const CourseHome: React.FC = () => {
