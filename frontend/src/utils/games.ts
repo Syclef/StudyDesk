@@ -62,8 +62,8 @@ export const GAMES: GameDefinition[] = [
     description: "One mistake ends the game. No second chances.",
     category: "challenge",
     route: "/game-center/elimination",
-    enabled: false,
-    badge: "Coming Soon",
+    enabled: true,
+    scoreKey: "auditstudydesk:elimination:high-score",
   },
 
   {
@@ -71,8 +71,8 @@ export const GAMES: GameDefinition[] = [
     title: "Streak Challenge",
     description: "Maintain a perfect streak for as long as you can.",
     category: "challenge",
-    route: "/game-center/streak",
-    enabled: false,
-    badge: "Coming Soon",
+    route: "/game-center/streak-challenge",
+    enabled: true,
+    scoreKey: "auditstudydesk:streak-challenge:high-score",
   },
 ];

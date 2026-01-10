@@ -251,3 +251,27 @@
   gap: 10px; 
 }
 .route-transition-overlay { position: absolute; inset: 0; background: #f5f6f7; z-index: 10; pointer-events: none; }
+
+/* =====================================================
+   GENERIC GAME TEXT HELPERS (NO INLINE STYLES)
+   ===================================================== */
+
+.game-label-spacer {
+  margin-top: 14px;
+}
+
+.game-definition-text {
+  font-size: 16px;
+  margin-top: 6px;
+}
+
+.game-stats-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-stats-sep {
+  color: #9ca3af;
+  font-weight: 700;
+}

@@ -1,109 +1,60 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 
-/* Core Pages */
+/* Main Pages */
 import CourseHome from "../pages/CourseHome";
-import StudyPlan from "../pages/StudyPlan/StudyPlanPage";
-import StudySessionPage from "../pages/StudyPlan/StudySessionPage";
-import Tests from "../pages/Tests/TestsPage";
+import StudyPage from "../pages/Study/StudyPage"; // Renamed from StudyPlan
+import PracticeDashboard from "../pages/Practice/PracticeDashboard";
+import MockExamsPage from "../pages/MockExams/MockExamsPage"; // Renamed from Tests
+
+/* Resources */
 import Flashcards from "../pages/Flashcards";
 import Resources from "../pages/Resources";
-import Review from "../pages/Review";
-
-/* Practice */
-import PracticeDashboard from "../pages/Practice/PracticeDashboard";
-import PracticeCategories from "../pages/Practice/PracticeCategories";
-import { PracticeQuestionView } from "../components/practice/PracticeQuestionView";
 
 /* Games */
 import GamesLayout from "../pages/Games/GamesLayout";
 import GameCenter from "../pages/Games/GameCenter";
 import CardHunterPage from "../pages/Games/CardHunterPage";
-import CardPickerPage from "../pages/Games/CardPickerPage";
-import FlashcardBlitzPage from "../pages/Games/FlashcardBlitzPage";
-import TimeAttackPage from "../pages/Games/TimeAttackPage";
+import EliminationPage from "../pages/Games/EliminationPage";
+// ... (Import other game pages as needed)
 
-/* -----------------------------
-   App Routes
-   ----------------------------- */
+/* The Unified Focus Engine */
+import SimulatorPage from "../pages/Simulator/SimulatorPage";
 
 function AppRoutes() {
   return (
     <Routes>
+      {/* FOCUS MODE: The Unified Engine 
+          - :mode can be 'study', 'practice', or 'exam'
+          - :id can be a taskId, a categoryName, or an examId
+      */}
+      <Route path="/session/:mode/:id" element={<SimulatorPage />} />
+
+      {/* BASE CAMP: All routes below have the Sidebar */}
       <Route element={<DashboardLayout />}>
-
-        {/* CORE */}
+        
+        {/* MAIN SECTION */}
         <Route path="/" element={<CourseHome />} />
-
-        {/* STUDY PLAN */}
-        <Route path="/study-plan" element={<StudyPlan />} />
-        <Route
-          path="/study/session/:task"
-          element={<StudySessionPage />}
-        />
-        <Route
-          path="/study-plan/study/session/:task"
-          element={<StudySessionPage />}
-        />
-
-        {/* PRACTICE */}
+        <Route path="/study" element={<StudyPage />} />
         <Route path="/practice" element={<PracticeDashboard />} />
-        <Route
-          path="/practice/categories"
-          element={<PracticeCategories />}
-        />
-        <Route
-          path="/practice/session/:category"
-          element={<PracticeQuestionView />}
-        />
+        <Route path="/exam" element={<MockExamsPage />} />
 
-        {/* OTHER MODULES */}
-        <Route path="/tests" element={<Tests />} />
+        {/* RESOURCES SECTION */}
         <Route path="/flashcards" element={<Flashcards />} />
-
-        {/* =========================
-           GAMES
-           ========================= */}
-        <Route path="/game-center" element={<GamesLayout />}>
+        
+        {/* GAME CENTER */}
+        <Route path="/games" element={<GamesLayout />}>
           <Route index element={<GameCenter />} />
-
-          <Route
-            path="card-hunter"
-            element={<CardHunterPage />}
-          />
-
-          <Route
-            path="card-picker"
-            element={<CardPickerPage />}
-          />
-
-          <Route
-            path="flashcard-blitz"
-            element={<FlashcardBlitzPage />}
-          />
-
-          <Route
-            path="time-attack"
-            element={<TimeAttackPage />}
-          />
+          <Route path="card-hunter" element={<CardHunterPage />} />
+          <Route path="elimination" element={<EliminationPage />} />
+          {/* ... other game child routes ... */}
         </Route>
 
-        {/* OTHER */}
         <Route path="/resources" element={<Resources />} />
-        <Route path="/review" element={<Review />} />
-
       </Route>
     </Routes>
   );
 }
-
-/* -----------------------------
-   App Root
-   ----------------------------- */
 
 export default function App() {
   return (
