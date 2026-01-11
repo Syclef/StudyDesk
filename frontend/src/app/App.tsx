@@ -4,7 +4,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 /* Main Pages */
 import CourseHome from "../pages/Dashboard/Dashboard";
 import StudyPage from "../pages/Study/StudyPage"; // Renamed from StudyPlan
-import PracticeDashboard from "../pages/Practice/PracticeDashboard";
+import PracticeDashboard from "../pages/Practice/PracticeCategories";
 import MockExamsPage from "../pages/MockExams/MockExamsPage"; // Renamed from Tests
 
 /* Resources */

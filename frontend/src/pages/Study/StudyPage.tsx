@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { STUDY_TASKS } from "./StudyPlanIndex";
 import "../../styles/study-plan.css";
 
 const DOMAINS = [
@@ -36,7 +37,7 @@ const DOMAINS = [
   },
   {
     name: "Information Systems Operations and Business Resilience",
-    children: [
+    tasks: [
       "IT Service Level Management",
       "IT Asset Management",
       "System and Operational Resilience",
@@ -50,14 +51,13 @@ const DOMAINS = [
       "IT Components",
       "Problem and Incident Management",
       "Shadow IT and End-User Computing",
-      "Study Interfaces",
       "IT Change, Configuration, and Patch Management",
       "Data Backup, Storage, and Restoration",
     ],
   },
   {
     name: "Protection of Information Assets",
-    children: [
+    tasks: [
       "Information System Attack Methods and Techniques",
       "Data Loss Prevention",
       "Cloud and Virtualized Environments",
@@ -77,7 +77,7 @@ const DOMAINS = [
   },
   {
     name: "Information Systems Acquisition, Development, and Implementation",
-    children: [
+    tasks: [
       "System Readiness and Implementation Testing",
       "Project Governance and Management",
       "System Development Methodologies",
@@ -90,83 +90,129 @@ const DOMAINS = [
   },
 ];
 
-export default function StudyPlanPage() {
+export default function StudyPage() {
   const navigate = useNavigate();
-  const [openDomain, setOpenDomain] = useState<string | null>(
-    DOMAINS[0].name
-  );
+  const [openDomain, setOpenDomain] = useState<string | null>(DOMAINS[0].name);
+
+  // Helper function to find question count for a task from your StudyPlanIndex
+  const getQuestionCount = (taskName: string) => {
+    const taskData = STUDY_TASKS.find((t) => t.category === taskName);
+    return taskData ? taskData.total : 0;
+  };
 
   return (
-    <div className="study-plan">
-      {/* HEADER */}
-      <div className="sp-header">
-        <div className="sp-goal">
-          <div className="sp-days">11</div>
-          <div className="sp-sub">Days Until Exam</div>
-        </div>
-
-        <div className="sp-progress">
-          <div className="sp-progress-header">
-            <span>Study Plan Progress</span>
-            <strong>90%</strong>
+    <div className="dashboard-wrapper">
+      <main className="main-content">
+        {/* HEADER SECTION: Title + Readiness Gauge */}
+        <header className="dashboard-header">
+          <div>
+            <h1 className="dash-title">Study Dashboard</h1>
+            <p className="dash-subtitle">Track your CISA certification progress</p>
           </div>
-          <div className="sp-progress-bar">
-            <div className="sp-progress-fill" />
-          </div>
-        </div>
-      </div>
-
-      {/* PRACTICE CTA */}
-      <div className="sp-current-task">
-        <div>
-          <strong>Practice Exam 3</strong>
-          <span>300 Knowledge Points · 60+ Minutes</span>
-        </div>
-        <button>Study Task</button>
-      </div>
-
-      {/* DOMAIN GROUPS */}
-      <div className="sp-domains">
-        {DOMAINS.map((domain) => {
-          const isOpen = openDomain === domain.name;
-
-          return (
-            <div key={domain.name} className="sp-domain">
-              <div
-                className="sp-domain-header"
-                onClick={() =>
-                  setOpenDomain(isOpen ? null : domain.name)
-                }
-              >
-                <span>{domain.name}</span>
-                <span>{isOpen ? "▾" : "▸"}</span>
-              </div>
-
-              {isOpen && (
-                <div className="sp-domain-tasks">
-                  {domain.tasks.map((task) => (
-                    <div key={task} className="sp-task">
-                      <div>
-                        <strong>{task}</strong>
-                        <span>30–60 Minutes</span>
-                      </div>
-                      <button
-                        onClick={() =>
-                          navigate(
-                            `/study/session/${encodeURIComponent(task)}`
-                          )
-                        }
-                      >
-                        Study
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          <div className="readiness-gauge">
+            <div className="gauge-circle" data-score="84">
+              <span className="score">84</span>
+              <span className="label">ReadySCORE™</span>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </header>
+
+        {/* PROGRESSION TILES: Phase Tracking */}
+        <section className="progression-section">
+          <div className="tile completed">
+            <span className="tile-label">PHASE 1</span>
+            <span className="tile-name">Foundation</span>
+          </div>
+          <div className="tile active">
+            <span className="tile-label">PHASE 2</span>
+            <span className="tile-name">Domain Deep-Dive</span>
+          </div>
+          <div className="tile locked">
+            <span className="tile-label">PHASE 3</span>
+            <span className="tile-name">Mock Readiness</span>
+          </div>
+        </section>
+
+        {/* CURRENT GOAL CARD: Highlighted Domain */}
+        <section className="goal-card">
+          <div className="goal-content">
+            <span className="tag">CURRENT FOCUS</span>
+            <h2>Domain 1: Information Systems Auditing Process</h2>
+            <div className="progress-container">
+              <div className="progress-bar-bg">
+                <div className="progress-bar-fill" data-progress="90"></div>
+              </div>
+              <span className="progress-text">90% of Domain 1 Mastered</span>
+            </div>
+          </div>
+          <button className="resume-btn" onClick={() => setOpenDomain(DOMAINS[0].name)}>
+            Resume Session
+          </button>
+        </section>
+
+        {/* DOMAIN ACCORDION LIST */}
+        <section className="domains-container">
+          <h3 className="section-title">Knowledge Domains</h3>
+          <div className="sp-domains">
+            {DOMAINS.map((domain) => {
+              const isOpen = openDomain === domain.name;
+
+              return (
+                <div key={domain.name} className="sp-domain">
+                  <div
+                    className="sp-domain-header"
+                    onClick={() => setOpenDomain(isOpen ? null : domain.name)}
+                  >
+                    <span>{domain.name}</span>
+                    <span className="chevron">{isOpen ? "▾" : "▸"}</span>
+                  </div>
+
+                  {isOpen && (
+                    <div className="sp-domain-tasks">
+                      {domain.tasks.map((task) => {
+                        const qCount = getQuestionCount(task);
+                        return (
+                          <div key={task} className="sp-task">
+                            <div className="task-info">
+                              <strong>{task}</strong>
+                              <span>{qCount} Questions Available</span>
+                            </div>
+                            <button
+                              disabled={qCount === 0}
+                              className={qCount === 0 ? "btn-disabled" : "study-btn"}
+                              onClick={() =>
+                                navigate(`/study/session/${encodeURIComponent(task)}`)
+                              }
+                            >
+                              {qCount > 0 ? "Study" : "Coming Soon"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* BOTTOM METRICS FOOTER */}
+        <footer className="bottom-stats">
+          <div className="stat-box">
+            <label>Daily Target</label>
+            <strong>12 Questions Left</strong>
+          </div>
+          <div className="stat-box">
+            <label>Exam Date</label>
+            <strong>Jan 22 (11 Days)</strong>
+          </div>
+          <div className="stat-box highlight">
+            <label>Mastery Streak</label>
+            <strong>Top 10% Overall</strong>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
