@@ -19,7 +19,7 @@ export default function Sidebar() {
   const iconClass = "w-5 h-5";
 
   return (
-    <aside className="sidebar-container sidebar-float w-64 p-6 flex flex-col rounded-[28px]">
+    <aside className="sidebar-container sidebar-float w-64 p-6 flex flex-col rounded-[28px] self-stretch">
       {/* App Logo/Title */}
       <div className="mb-10 px-2">
         <h1 className="text-xl font-bold text-white tracking-tight">
