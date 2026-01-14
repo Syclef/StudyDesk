@@ -3,9 +3,18 @@ import DashboardLayout from "../layout/DashboardLayout";
 
 /* Main Pages */
 import CourseHome from "../pages/Dashboard/Dashboard";
-import StudyPage from "../pages/Study/StudyPage"; // Renamed from StudyPlan
+
+/* Study / Practice Engines */
+import StudyPage from "../pages/Study/StudyPage";
 import PracticeDashboard from "../pages/Practice/PracticeCategories";
-import MockExamsPage from "../pages/MockExams/MockExamsPage"; // Renamed from Tests
+
+/* Exam */
+import ExamLandingPage from "../pages/Exam/ExamLandingPage";
+import ExamSetupPage from "../pages/Exam/ExamSetupPage";
+import ExamTakePage from "../pages/Exam/ExamTakePage";
+import ExamResultsPage from "../pages/Exam/ExamResultsPage";
+import ExamReviewPage from "../pages/Exam/ExamReviewPage";
+import ExamHistoryPage from "../pages/Exam/ExamHistoryPage";
 
 /* Resources */
 import Flashcards from "../pages/Flashcards";
@@ -16,7 +25,6 @@ import GamesLayout from "../pages/Games/GamesLayout";
 import GameCenter from "../pages/Games/GameCenter";
 import CardHunterPage from "../pages/Games/CardHunterPage";
 import EliminationPage from "../pages/Games/EliminationPage";
-// ... (Import other game pages as needed)
 
 /* The Unified Focus Engine */
 import SimulatorPage from "../pages/Simulator/SimulatorPage";
@@ -24,33 +32,36 @@ import SimulatorPage from "../pages/Simulator/SimulatorPage";
 function AppRoutes() {
   return (
     <Routes>
-      {/* FOCUS MODE: The Unified Engine 
-          - :mode can be 'study', 'practice', or 'exam'
-          - :id can be a taskId, a categoryName, or an examId
-      */}
+      {/* FOCUS MODE */}
       <Route path="/session/:mode/:id" element={<SimulatorPage />} />
 
-      {/* BASE CAMP: All routes below have the Sidebar */}
+      {/* BASE CAMP */}
       <Route element={<DashboardLayout />}>
-        
         {/* MAIN SECTION */}
         <Route path="/" element={<CourseHome />} />
+
+        {/* MODULES */}
         <Route path="/study" element={<StudyPage />} />
         <Route path="/practice" element={<PracticeDashboard />} />
-        <Route path="/exam" element={<MockExamsPage />} />
 
-        {/* RESOURCES SECTION */}
+        {/* EXAM MODULE */}
+        <Route path="/exam" element={<ExamLandingPage />} />
+        <Route path="/exam/setup" element={<ExamSetupPage />} />
+        <Route path="/exam/take" element={<ExamTakePage />} />
+        <Route path="/exam/results" element={<ExamResultsPage />} />
+        <Route path="/exam/review" element={<ExamReviewPage />} />
+        <Route path="/exam/history" element={<ExamHistoryPage />} />
+
+        {/* RESOURCES */}
         <Route path="/flashcards" element={<Flashcards />} />
-        
+        <Route path="/resources" element={<Resources />} />
+
         {/* GAME CENTER */}
         <Route path="/games" element={<GamesLayout />}>
           <Route index element={<GameCenter />} />
           <Route path="card-hunter" element={<CardHunterPage />} />
           <Route path="elimination" element={<EliminationPage />} />
-          {/* ... other game child routes ... */}
         </Route>
-
-        <Route path="/resources" element={<Resources />} />
       </Route>
     </Routes>
   );
