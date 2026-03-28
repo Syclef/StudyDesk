@@ -1,0 +1,43 @@
+/* Question Engine Base Styles */
+
+.question-engine {
+  max-width: 900px;
+  margin: 32px auto;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 6px;
+}
+
+.question-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.question-body {
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.answer-option {
+  border: 1px solid #d1d5db;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.answer-option:hover {
+  background: #f3f4f6;
+}
+
+.answer-option.selected {
+  border-color: #2563eb;
+  background: #eef2ff;
+}
+
+.question-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}

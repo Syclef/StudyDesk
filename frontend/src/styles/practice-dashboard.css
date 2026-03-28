@@ -1,0 +1,162 @@
+/* =====================================================
+   PRACTICE DASHBOARD – ISACA PERFORM
+   ===================================================== */
+
+.practice-dashboard {
+  padding: 24px 32px;
+  max-width: 1200px;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1f2937;
+}
+
+/* HEADER */
+.practice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.practice-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.reset-link {
+  color: #d93025;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* PROGRESS */
+.practice-progress {
+  margin-bottom: 28px;
+}
+
+.progress-label {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.progress-bar {
+  height: 14px;
+  background: #e5e7eb;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #1f2f5f;
+}
+
+.progress-fill-100 {
+  width: 100%;
+}
+
+/* =====================================================
+   METRICS – FIXED & SCOPED (NO SIDE EFFECTS)
+   ===================================================== */
+
+.practice-metrics {
+  display: grid;
+  grid-template-columns: 160px repeat(5, 1fr);
+  gap: 12px;
+  margin: 16px 0 40px 0;
+  align-items: stretch;
+}
+
+/* IMPORTANT:
+   Scope metric styles ONLY to direct children of .practice-metrics
+   so practice cards are NEVER affected
+*/
+
+/* Shared metric card base */
+.practice-metrics > .metric-main,
+.practice-metrics > .metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 14px;
+
+  height: 80px;
+  min-height: 80px;
+}
+
+/* Primary metric (Correct %) */
+.practice-metrics > .metric-main {
+  align-items: center;
+}
+
+/* Primary value */
+.practice-metrics > .metric-main .metric-main-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+/* Primary label */
+.practice-metrics > .metric-main .metric-main-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Secondary metrics */
+.practice-metrics > .metric {
+  gap: 4px;
+}
+
+.practice-metrics > .metric .metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.2;
+}
+
+.practice-metrics > .metric .metric-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* =====================================================
+   PRACTICE CARDS (UNCHANGED)
+   ===================================================== */
+
+.practice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.practice-card {
+  border: 1px solid #dcdfe3;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.practice-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.practice-card p {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.select-btn {
+  margin-top: 12px;
+  background: #1f2f5f;
+  color: #ffffff;
+  border: none;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}

@@ -1,0 +1,20 @@
+{
+  "name": "auditstudydesk",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "electron": "electron electron/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "electron": "^39.2.7"
+  },
+  "dependencies": {
+    "lucide-react": "^0.562.0",
+    "mammoth": "^1.11.0"
+  }
+}

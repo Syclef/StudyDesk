@@ -1,0 +1,66 @@
+/* ===============================
+   EXAM SUMMARY
+   =============================== */
+
+.exam-summary {
+  margin-top: 40px;
+}
+
+.exam-score-block {
+  margin-top: 24px;
+}
+
+.exam-result {
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.exam-result-pass {
+  color: #1e8e3e;
+}
+
+.exam-result-fail {
+  color: #d93025;
+}
+
+.exam-disclaimer {
+  font-size: 12px;
+  color: #5f6368;
+  margin-top: 12px;
+}
+
+/* ===============================
+   EXAM QUESTION HEADER
+   =============================== */
+
+.exam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 12px 16px;
+  margin-bottom: 20px;
+
+  background: #ffffff;
+  border: 1px solid #dcdfe3;
+  border-radius: 4px;
+}
+
+.exam-timer {
+  font-weight: 600;
+  font-size: 14px;
+  color: #202124;
+  white-space: nowrap;
+}
+
+/* ===============================
+   EXAM VIOLATIONS
+   =============================== */
+
+.exam-violation {
+  font-weight: 500;
+  font-size: 13px;
+  color: #d93025;
+  white-space: nowrap;
+}
