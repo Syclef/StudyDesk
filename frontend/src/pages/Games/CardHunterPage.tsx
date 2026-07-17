@@ -49,7 +49,7 @@ export default function CardHunterPage() {
 
             <button
               className="btn btn-secondary"
-              onClick={() => navigate("/game-center")}
+              onClick={() => navigate("/games")}
             >
               Back to Game Center
             </button>

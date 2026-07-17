@@ -143,8 +143,9 @@ body {
 
 .pc-tiles {
   display: grid;
-  grid-template-columns: 160px repeat(5, 1fr);
+  grid-template-columns: 160px 1fr;
   gap: 12px;
+  max-width: 400px;
 }
 
 .pc-tile {
@@ -179,6 +180,25 @@ body {
   font-size: 16px;
   font-weight: 600;
   color: #374151;
+}
+
+/* =========================================
+   Status messages
+   ========================================= */
+
+.pc-status {
+  padding: 32px 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+.pc-status--error {
+  color: #b91c1c;
+}
+
+.cat-count {
+  color: #9ca3af;
+  font-size: 12px;
 }
 
 /* =========================================

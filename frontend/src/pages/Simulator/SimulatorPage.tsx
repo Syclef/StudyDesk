@@ -1,204 +1,279 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getNextQuestion, recordResponse, startStudySession } from '../../data/studySessions';
-import { ChevronLeft, ChevronRight, XCircle, Info, Flag, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { recordStudyResult } from "../../utils/studyProgress";
 
-interface Question {
+const API_BASE = "http://127.0.0.1:4000";
+
+const BG = "#0f1b2d";
+const CARD = "#1a2540";
+const TEXT = "#e5eaf1";
+const MUTED = "#94a3b8";
+const BORDER = "rgba(255,255,255,0.10)";
+const ACCENT = "#3b82f6";
+const SUCCESS = "#4ade80";
+const DANGER = "#f87171";
+
+interface Choice {
   id: string;
-  index: number;
+  label: string;
+  text: string;
+  isCorrect: boolean;
+  justification: string | null;
+}
+
+interface ApiQuestion {
+  order: number;
+  id: string;
+  domain: string;
+  category: string;
+  text: string;
+  choices: Choice[];
+}
+
+interface SessionState {
+  attemptId: string;
+  questions: ApiQuestion[];
   total: number;
-  stem: string;
-  choices: Record<string, string>;
-  correctAnswer: string;
-  explanation: string;
 }
 
 const SimulatorPage = () => {
-  const { taskId } = useParams<{ taskId: string }>();
+  const { id } = useParams<{ mode: string; id: string }>();
   const navigate = useNavigate();
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+
+  const [session, setSession] = useState<SessionState | null>(null);
+  const [idx, setIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([]);
-  
-  // Ref for the progress bar to avoid inline-style errors
-  const progressRef = useRef<HTMLDivElement>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const progressFillRef = useRef<HTMLDivElement>(null);
+
+  const categoryName = id ? decodeURIComponent(id) : "Study";
 
   useEffect(() => {
-    if (taskId) {
-      const id = startStudySession(taskId);
-      setSessionId(id);
-      const firstQ = getNextQuestion(id);
-      setCurrentQuestion(firstQ as unknown as Question);
+    async function startSession() {
+      try {
+        const res = await fetch(`${API_BASE}/attempts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "STUDY",
+            category: id ? decodeURIComponent(id) : undefined,
+            durationSec: 3600,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to start session");
+        const data = await res.json();
+        setSession({ attemptId: data.attemptId, questions: data.questions, total: data.total });
+        setLoading(false);
+      } catch (err) {
+        setError("Could not load questions. Make sure the API is running.");
+        setLoading(false);
+      }
     }
-  }, [taskId]);
+    startSession();
+  }, [id]);
 
-  // Update progress bar without inline styles
   useEffect(() => {
-    if (progressRef.current && currentQuestion) {
-      const percentage = (currentQuestion.index / currentQuestion.total) * 100;
-      progressRef.current.style.width = `${percentage}%`;
+    if (progressFillRef.current && session) {
+      const pct = ((idx + 1) / session.total) * 100;
+      progressFillRef.current.style.width = `${pct}%`;
     }
-  }, [currentQuestion]);
+  }, [idx, session]);
 
-  const handleCheckAnswer = () => {
-    if (!sessionId || !currentQuestion || !selectedOption) return;
-    const isCorrect = selectedOption === currentQuestion.correctAnswer;
-    recordResponse(sessionId, currentQuestion.id, selectedOption, isCorrect);
+  const currentQuestion = session?.questions[idx] ?? null;
+
+  const handleCheckAnswer = async () => {
+    if (!session || !currentQuestion || !selectedOption) return;
+    const choice = currentQuestion.choices.find((c) => c.label === selectedOption);
+    if (!choice) return;
+
+    if (choice.isCorrect) setCorrectCount((n) => n + 1);
+
+    try {
+      await fetch(`${API_BASE}/attempts/${session.attemptId}/answers/${currentQuestion.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ choiceLabel: selectedOption }),
+      });
+    } catch (err) {
+      console.error("Failed to record answer:", err);
+    }
     setShowExplanation(true);
   };
 
   const handleNext = () => {
-    if (!sessionId) return;
-    const next = getNextQuestion(sessionId);
-    if (next) {
-      setCurrentQuestion(next as unknown as Question);
-      setSelectedOption(null);
-      setShowExplanation(false);
-      setEliminatedOptions([]);
-    } else {
-      navigate('/');
+    if (!session) return;
+    if (idx + 1 >= session.total) {
+      recordStudyResult(categoryName, correctCount, session.total);
+      fetch(`${API_BASE}/attempts/${session.attemptId}/submit`, { method: "POST" })
+        .finally(() => navigate("/study"));
+      return;
     }
+    setIdx((i) => i + 1);
+    setSelectedOption(null);
+    setShowExplanation(false);
   };
 
-  const toggleEliminate = (e: React.MouseEvent, key: string) => {
-    e.stopPropagation();
-    if (showExplanation) return;
-    setEliminatedOptions(prev => 
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+  const handleSkip = () => {
+    if (!session) return;
+    if (idx + 1 >= session.total) {
+      recordStudyResult(categoryName, correctCount, session.total);
+      navigate("/study");
+      return;
+    }
+    setIdx((i) => i + 1);
+    setSelectedOption(null);
+    setShowExplanation(false);
   };
 
-  if (!currentQuestion) return <div className="p-20 text-center">Loading...</div>;
+  const pageStyle: React.CSSProperties = {
+    minHeight: "100vh",
+    background: BG,
+    color: TEXT,
+    padding: "24px 32px",
+    maxWidth: 860,
+    margin: "0 auto",
+  };
+
+  if (loading) return <div style={pageStyle}><p style={{ color: MUTED }}>Loading questions...</p></div>;
+  if (error) return (
+    <div style={pageStyle}>
+      <p style={{ color: DANGER }}>{error}</p>
+      <button onClick={() => navigate("/study")} style={{ color: ACCENT, background: "none", border: "none", cursor: "pointer" }}>Go back</button>
+    </div>
+  );
+  if (!session || !currentQuestion) return (
+    <div style={pageStyle}>
+      <p style={{ color: MUTED }}>No questions found.</p>
+      <button onClick={() => navigate("/study")} style={{ color: ACCENT, background: "none", border: "none", cursor: "pointer" }}>Go back</button>
+    </div>
+  );
+
+  const selectedChoice = currentQuestion.choices.find((c) => c.label === selectedOption);
+  const isCorrect = selectedChoice?.isCorrect ?? false;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <header className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
-        <button 
-          onClick={() => navigate('/')} 
-          className="text-gray-400 hover:text-red-500 transition-colors"
-          title="Close Session"
-          aria-label="Close Session"
-        >
-          <XCircle size={24} />
-        </button>
-        
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-            Question {currentQuestion.index} of {currentQuestion.total}
-          </span>
-          <div className="w-48 h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
-            {/* Progress Bar with ref instead of inline style */}
-            <div ref={progressRef} className="h-full bg-blue-600 transition-all duration-500 ease-out" />
-          </div>
+    <div style={pageStyle}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{categoryName}</h1>
+        <button
+          onClick={() => navigate("/study")}
+          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 14px", color: TEXT, cursor: "pointer", fontSize: 13 }}
+        >Exit</button>
+      </div>
+
+      {/* Progress */}
+      <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>Question {idx + 1} of {session.total}</div>
+      <div style={{ width: "100%", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", marginBottom: 20, overflow: "hidden" }}>
+        <div ref={progressFillRef} style={{ height: "100%", background: ACCENT, borderRadius: 999, width: "0%", transition: "width 0.2s" }} />
+      </div>
+
+      {/* Question card */}
+      <div style={{ background: CARD, borderRadius: 12, padding: 24, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}>
+          {currentQuestion.domain} · {currentQuestion.category}
         </div>
-        
-        <button className="text-gray-400" title="Flag Question" aria-label="Flag Question">
-          <Flag size={20} />
-        </button>
-      </header>
 
-      <main className="flex-grow max-w-3xl mx-auto w-full p-6 md:p-12 pb-32">
-        <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight mb-12">
-          {currentQuestion.stem}
-        </h2>
+        <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.6, marginBottom: 20, color: TEXT }}>
+          {currentQuestion.text}
+        </div>
 
-        <div className="space-y-4">
-          {Object.entries(currentQuestion.choices).map(([key, value]) => {
-            const isSelected = selectedOption === key;
-            const isCorrect = key === currentQuestion.correctAnswer;
-            const isEliminated = eliminatedOptions.includes(key);
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {currentQuestion.choices.map((choice) => {
+            const isSelected = selectedOption === choice.label;
+            const isCorrectChoice = choice.isCorrect;
 
-            let containerClasses = "border-gray-200 bg-white hover:border-blue-300";
-            if (isSelected) containerClasses = "border-blue-600 bg-blue-50 z-10 shadow-md";
-            if (showExplanation && isCorrect) containerClasses = "border-green-500 bg-green-50 z-10";
-            if (showExplanation && isSelected && !isCorrect) containerClasses = "border-red-500 bg-red-50 z-10";
-            if (isEliminated && !showExplanation) containerClasses = "opacity-30 grayscale scale-[0.98] border-gray-100 bg-gray-50";
+            let bg = "rgba(255,255,255,0.04)";
+            let border = BORDER;
+            let color = TEXT;
+
+            if (showExplanation) {
+              if (isCorrectChoice) { bg = "rgba(74,222,128,0.12)"; border = SUCCESS; }
+              else if (isSelected) { bg = "rgba(248,113,113,0.12)"; border = DANGER; }
+              else { color = MUTED; }
+            } else if (isSelected) {
+              bg = "rgba(59,130,246,0.15)";
+              border = ACCENT;
+            }
+
+            const hasJustification = showExplanation && choice.justification;
+
+            const choiceTag = showExplanation && isSelected && isCorrectChoice
+              ? <span style={{ color: SUCCESS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>Your answer is correct</span>
+              : showExplanation && isSelected && !isCorrectChoice
+              ? <span style={{ color: DANGER, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>Your answer is incorrect</span>
+              : showExplanation && !isSelected && isCorrectChoice
+              ? <span style={{ color: SUCCESS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>Correct answer</span>
+              : null;
 
             return (
-              <div
-                key={key}
-                onClick={() => !showExplanation && setSelectedOption(key)}
-                className={`relative group flex items-start p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${containerClasses}`}
-              >
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold mr-4 mt-0.5 transition-colors
-                  ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-400'}
-                  ${showExplanation && isCorrect ? 'bg-green-500 border-green-500 text-white' : ''}
-                `}>
-                  {showExplanation && isCorrect ? <CheckCircle2 size={18} /> : key}
+              <div key={choice.id} style={{ display: "flex", flexDirection: "column" }}>
+                <div
+                  onClick={() => !showExplanation && setSelectedOption(choice.label)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "14px 16px",
+                    borderRadius: hasJustification ? "8px 8px 0 0" : 8,
+                    border: `1px solid ${border}`,
+                    background: bg, color,
+                    cursor: showExplanation ? "default" : "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, flexShrink: 0, width: 20 }}>{choice.label}</span>
+                  <span style={{ flex: 1, fontSize: 14, lineHeight: 1.5 }}>{choice.text}</span>
+                  {choiceTag}
                 </div>
-                
-                <span className={`text-lg font-medium leading-snug flex-grow ${isSelected ? 'text-blue-900' : 'text-slate-700'}`}>
-                  {value}
-                </span>
 
-                {!showExplanation && (
-                  <button 
-                    onClick={(e) => toggleEliminate(e, key)}
-                    className="ml-2 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Eliminate Option"
-                    aria-label={`Eliminate Option ${key}`}
-                  >
-                    <XCircle size={20} />
-                  </button>
+                {hasJustification && (
+                  <div style={{
+                    padding: "10px 16px",
+                    background: "rgba(255,255,255,0.03)",
+                    border: `1px solid ${border}`,
+                    borderTop: "none",
+                    borderRadius: "0 0 8px 8px",
+                    fontSize: 12, color: MUTED, lineHeight: 1.5,
+                  }}>
+                    <span style={{ color: TEXT }}>Explanation:</span> {choice.justification}
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
+      </div>
 
-        {showExplanation && (
-          <div className="mt-10 p-8 bg-slate-900 rounded-3xl text-white shadow-2xl animate-in fade-in slide-in-from-bottom-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Info size={20} className="text-blue-400" />
-              <span className="font-black text-xs uppercase tracking-[0.2em] text-blue-400">Rationalization</span>
-            </div>
-            <p className="text-slate-300 leading-relaxed text-lg">
-              {currentQuestion.explanation}
-            </p>
-          </div>
-        )}
-      </main>
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {!showExplanation ? (
+          <button
+            onClick={handleSkip}
+            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 20px", fontSize: 13, color: MUTED, cursor: "pointer" }}
+          >Skip question</button>
+        ) : <div />}
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-6 z-20">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <button 
-            className="flex items-center gap-2 text-gray-400 font-bold px-4 py-2"
-            disabled={currentQuestion.index === 1 || showExplanation}
-            title="Previous Question"
-          >
-            <ChevronLeft size={20} /> <span className="hidden md:inline">Previous</span>
-          </button>
-
-          {!showExplanation ? (
-            <button
-              onClick={handleCheckAnswer}
-              disabled={!selectedOption}
-              className={`px-12 py-4 rounded-2xl font-black uppercase tracking-widest transition-all
-                ${selectedOption ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
-              `}
-            >
-              Check Answer
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              className="px-12 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest shadow-xl shadow-slate-200"
-            >
-              Next Question
-            </button>
-          )}
-
-          <button 
-            className="flex items-center gap-2 text-blue-600 font-bold px-4 py-2"
+        {!showExplanation ? (
+          <button
+            disabled={!selectedOption}
+            onClick={handleCheckAnswer}
+            style={{
+              background: selectedOption ? ACCENT : "rgba(255,255,255,0.08)",
+              border: "none", borderRadius: 8, padding: "10px 28px",
+              fontSize: 14, fontWeight: 600,
+              color: selectedOption ? "#fff" : MUTED,
+              cursor: selectedOption ? "pointer" : "not-allowed",
+            }}
+          >Check Answer</button>
+        ) : (
+          <button
             onClick={handleNext}
-            title="Skip Question"
-          >
-            <span className="hidden md:inline">Skip</span> <ChevronRight size={20} />
-          </button>
-        </div>
-      </footer>
+            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" }}
+          >{idx + 1 < session.total ? "Next Question" : "Finish"}</button>
+        )}
+      </div>
     </div>
   );
 };

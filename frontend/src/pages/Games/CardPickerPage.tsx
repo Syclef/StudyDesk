@@ -44,7 +44,7 @@ export default function CardPickerPage() {
 
             <button
               className="btn btn-secondary"
-              onClick={() => navigate("/game-center")}
+              onClick={() => navigate("/games")}
             >
               Back to Game Center
             </button>
@@ -57,5 +57,5 @@ export default function CardPickerPage() {
   /* =========================
      ACTUAL GAME SCREEN
      ========================= */
-  return <CardPickerGame onExit={() => navigate("/game-center")} />;
+  return <CardPickerGame onExit={() => navigate("/games")} />;
 }

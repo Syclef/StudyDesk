@@ -35,7 +35,7 @@ export default function CardPickerGame({ onExit }: Props) {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch("http://127.0.0.1:8000/flashcards");
+      const res = await fetch("http://127.0.0.1:4000/flashcards");
       const data: Flashcard[] = await res.json();
       setCards(shuffle(data));
       setLoading(false);

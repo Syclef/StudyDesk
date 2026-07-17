@@ -874,10 +874,10 @@
 .exam-topbar .exam-submit-btn{
   display:none !important;
 }
+
 .exam-exit,
-.exam-legend,
-.exam-grid{
-  display:none !important;
+.exam-legend {
+  display: none !important;
 }
 
 .pp-progress-rail {

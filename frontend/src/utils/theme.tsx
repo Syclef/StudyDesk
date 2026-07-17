@@ -16,7 +16,7 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.dataset.theme = mode;
 }
 
-export function ThemeProvider({ children, defaultMode = "dark" }: { children: React.ReactNode; defaultMode?: ThemeMode }) {
+export function ThemeProvider({ children, defaultMode = "light" }: { children: React.ReactNode; defaultMode?: ThemeMode }) {
   const [mode, setModeState] = useState<ThemeMode>(defaultMode);
 
   useEffect(() => {

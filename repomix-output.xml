@@ -194,7 +194,7 @@ export default function EliminationGame({ onExit }: Props) {
 
   useEffect(() => {
     let active = true;
-    fetch("http://127.0.0.1:8000/flashcards")
+    fetch("http://127.0.0.1:4000/flashcards")
       .then((res) => res.json())
       .then((data) => {
         if (active) {
@@ -378,7 +378,7 @@ export default function StreakChallengeGame({ mode, onExit }: Props) {
   // Fetch flashcards
   useEffect(() => {
     let active = true;
-    fetch("http://127.0.0.1:8000/flashcards")
+    fetch("http://127.0.0.1:4000/flashcards")
       .then((res) => res.json())
       .then((data) => {
         if (active) {
@@ -538,7 +538,7 @@ export default function EliminationPage() {
 
   if (started) {
     return (
-      <EliminationGame onExit={() => navigate("/game-center")} />
+      <EliminationGame onExit={() => navigate("/games")} />
     );
   }
 
@@ -577,7 +577,7 @@ export default function EliminationPage() {
 
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/game-center")}
+            onClick={() => navigate("/games")}
           >
             Back to Game Center
           </button>
@@ -607,7 +607,7 @@ export default function StreakChallengePage() {
     return (
       <StreakChallengeGame
         mode={mode}
-        onExit={() => navigate("/game-center")}
+        onExit={() => navigate("/games")}
       />
     );
   }
@@ -666,7 +666,7 @@ export default function StreakChallengePage() {
 
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/game-center")}
+            onClick={() => navigate("/games")}
           >
             Back to Game Center
           </button>
@@ -2247,7 +2247,7 @@ export interface Flashcard {
   definition: string;
 }
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "http://127.0.0.1:4000";
 
 export async function fetchFlashcards(): Promise<Flashcard[]> {
   const res = await fetch(`${API_BASE}/flashcards`);
@@ -2261,7 +2261,7 @@ export async function fetchFlashcards(): Promise<Flashcard[]> {
 </file>
 
 <file path="frontend/src/api/questions.ts">
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "http://127.0.0.1:4000";
 export interface Question {
   id: number;
   domain: number;
@@ -2629,7 +2629,7 @@ export function TimeAttackGame({ onExit }: Props) {
 
   // Load cards from API
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/flashcards")
+    fetch("http://127.0.0.1:4000/flashcards")
       .then(res => res.json())
       .then(data => {
         setCards(shuffle(data));
@@ -6310,7 +6310,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/flashcards": {
-        target: "http://127.0.0.1:8000",
+        target: "http://127.0.0.1:4000",
         changeOrigin: true
       }
     }
@@ -7089,7 +7089,7 @@ export default function CardPickerGame({ onExit }: Props) {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch("http://127.0.0.1:8000/flashcards");
+      const res = await fetch("http://127.0.0.1:4000/flashcards");
       const data: Flashcard[] = await res.json();
       setCards(shuffle(data));
       setLoading(false);
@@ -7416,7 +7416,7 @@ export default function FlashcardBlitzGame() {
             <button className="btn btn-primary btn-primary-full-width" onClick={() => window.location.reload()}>
               Play Again
             </button>
-            <button className="btn btn-secondary btn-secondary-full-width" onClick={() => navigate("/game-center")}>
+            <button className="btn btn-secondary btn-secondary-full-width" onClick={() => navigate("/games")}>
               Back to Game Center
             </button>
           </div>
@@ -11688,7 +11688,7 @@ export default function CardHunterPage() {
 
             <button
               className="btn btn-secondary"
-              onClick={() => navigate("/game-center")}
+              onClick={() => navigate("/games")}
             >
               Back to Game Center
             </button>
@@ -11753,7 +11753,7 @@ export default function CardPickerPage() {
 
             <button
               className="btn btn-secondary"
-              onClick={() => navigate("/game-center")}
+              onClick={() => navigate("/games")}
             >
               Back to Game Center
             </button>
@@ -11766,7 +11766,7 @@ export default function CardPickerPage() {
   /* =========================
      ACTUAL GAME SCREEN
      ========================= */
-  return <CardPickerGame onExit={() => navigate("/game-center")} />;
+  return <CardPickerGame onExit={() => navigate("/games")} />;
 }
 </file>
 
@@ -12711,7 +12711,7 @@ export default function FlashcardBlitzPage() {
 
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/game-center")}
+            onClick={() => navigate("/games")}
           >
             Back to Game Center
           </button>

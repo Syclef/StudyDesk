@@ -219,7 +219,7 @@ export default function FlashcardBlitzGame() {
             <button className="btn btn-primary btn-primary-full-width" onClick={() => window.location.reload()}>
               Play Again
             </button>
-            <button className="btn btn-secondary btn-secondary-full-width" onClick={() => navigate("/game-center")}>
+            <button className="btn btn-secondary btn-secondary-full-width" onClick={() => navigate("/games")}>
               Back to Game Center
             </button>
           </div>

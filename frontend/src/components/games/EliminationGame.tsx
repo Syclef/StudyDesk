@@ -47,7 +47,7 @@ export default function EliminationGame({ onExit }: Props) {
 
   useEffect(() => {
     let active = true;
-    fetch("http://127.0.0.1:8000/flashcards")
+    fetch("http://127.0.0.1:4000/flashcards")
       .then((res) => res.json())
       .then((data) => {
         if (active) {

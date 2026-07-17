@@ -11,7 +11,7 @@ const DashboardLayout = () => {
       <Sidebar />
 
       {/* IMPORTANT: main must not create page scroll */}
-      <main className="flex-1 h-screen relative z-10 overflow-hidden">
+      <main className="flex-1 h-screen relative z-10 overflow-y-auto">
         <RouteTransition />
         <Outlet />
       </main>

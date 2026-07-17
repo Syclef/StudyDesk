@@ -1,217 +1,153 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { STUDY_TASKS } from "./StudyPlanIndex";
+import { getStudyProgress, type StudyCategoryProgress } from "../../utils/studyProgress";
 import "../../styles/study-plan.css";
 
-const DOMAINS = [
-  {
-    name: "Information System Auditing Process",
-    tasks: [
-      "IS Audit Standards, Guidelines, Functions, and Codes of Ethics",
-      "Types of Audits, Assessments, and Reviews",
-      "Risk-Based Audit Planning",
-      "Types of Controls and Considerations",
-      "Audit Project Management",
-      "Audit Testing and Sampling Methodology",
-      "Audit Evidence Collection Techniques",
-      "Audit Data Analytics",
-      "Reporting and Communication Techniques",
-      "Quality Assurance and Improvement of Audit Process",
-    ],
-  },
-  {
-    name: "Governance and Management of IT",
-    tasks: [
-      "Laws, Regulations, and Industry Standards",
-      "Organizational Structures and Governance Frameworks",
-      "IT Policies, Standards, Procedures, and Guidelines",
-      "Enterprise Architecture and Considerations",
-      "Enterprise Risk Management",
-      "Privacy Program and Principles",
-      "Data Governance and Classification",
-      "IT Resource Management",
-      "IT Vendor Management",
-      "IT Performance Monitoring and Reporting",
-      "Quality Assurance and Quality Management of IT",
-    ],
-  },
-  {
-    name: "Information Systems Operations and Business Resilience",
-    tasks: [
-      "IT Service Level Management",
-      "IT Asset Management",
-      "System and Operational Resilience",
-      "Database Management",
-      "Disaster Recovery Plans",
-      "Systems Availability and Capacity Management",
-      "Business Impact Analysis",
-      "Operational Log Management",
-      "Job Scheduling and Production Process Automation",
-      "Business Continuity Plan",
-      "IT Components",
-      "Problem and Incident Management",
-      "Shadow IT and End-User Computing",
-      "IT Change, Configuration, and Patch Management",
-      "Data Backup, Storage, and Restoration",
-    ],
-  },
-  {
-    name: "Protection of Information Assets",
-    tasks: [
-      "Information System Attack Methods and Techniques",
-      "Data Loss Prevention",
-      "Cloud and Virtualized Environments",
-      "Network and End-Point Security",
-      "Identity and Access Management",
-      "Evidence Collection and Forensics",
-      "Data Encryption",
-      "Physical and Environmental Controls",
-      "Security Awareness Training and Programs",
-      "Public Key Infrastructure",
-      "Security Testing Tools and Techniques",
-      "Security Incident Response Management",
-      "Security Monitoring Logs, Tools, and Techniques",
-      "Mobile, Wireless, and Internet-of-Things Devices",
-      "Information Asset Security Policies, Frameworks, Standards, and Guidelines",
-    ],
-  },
-  {
-    name: "Information Systems Acquisition, Development, and Implementation",
-    tasks: [
-      "System Readiness and Implementation Testing",
-      "Project Governance and Management",
-      "System Development Methodologies",
-      "Implementation Configuration and Release Management",
-      "System Migration, Infrastructure Deployment, and Data Conversion",
-      "Post-Implementation Review",
-      "Business Case and Feasibility Analysis",
-      "Control Identification and Design",
-    ],
-  },
-];
+const API_BASE = "http://127.0.0.1:4000";
+
+interface CategorySummary {
+  domain: string;
+  categories: { name: string; count: number }[];
+}
+
+const DOMAIN_NAMES: Record<string, string> = {
+  D1: "Information System Auditing Process",
+  D2: "Governance and Management of IT",
+  D3: "Information Systems Acquisition, Development, and Implementation",
+  D4: "Information Systems Operations and Business Resilience",
+  D5: "Protection of Information Assets",
+};
 
 export default function StudyPage() {
   const navigate = useNavigate();
-  const [openDomain, setOpenDomain] = useState<string | null>(DOMAINS[0].name);
+  const [openDomain, setOpenDomain] = useState<string | null>("D1");
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
+  const [progress, setProgress] = useState<Record<string, StudyCategoryProgress>>({});
+  const [loading, setLoading] = useState(true);
 
-  // Helper function to find question count for a task from your StudyPlanIndex
-  const getQuestionCount = (taskName: string) => {
-    const taskData = STUDY_TASKS.find((t) => t.category === taskName);
-    return taskData ? taskData.total : 0;
+  useEffect(() => {
+    fetch(`${API_BASE}/categories`)
+      .then((r) => r.json())
+      .then((data: CategorySummary[]) => {
+        setCategories(data);
+        setProgress(getStudyProgress());
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Refresh progress when returning to page
+  useEffect(() => {
+    const onFocus = () => setProgress(getStudyProgress());
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  const getCategoriesForDomain = (domainCode: string) => {
+    return categories.find((c) => c.domain === domainCode)?.categories ?? [];
   };
 
   return (
     <div className="dashboard-wrapper">
       <main className="main-content">
-        {/* HEADER SECTION: Title + Readiness Gauge */}
         <header className="dashboard-header">
           <div>
-            <h1 className="dash-title">Study Dashboard</h1>
-            <p className="dash-subtitle">Track your CISA certification progress</p>
-          </div>
-          <div className="readiness-gauge">
-            <div className="gauge-circle" data-score="84">
-              <span className="score">84</span>
-              <span className="label">ReadySCORE™</span>
-            </div>
+            <h1 className="dash-title">Study</h1>
+            <p className="dash-subtitle">Study by domain and category</p>
           </div>
         </header>
 
-        {/* PROGRESSION TILES: Phase Tracking */}
-        <section className="progression-section">
-          <div className="tile completed">
-            <span className="tile-label">PHASE 1</span>
-            <span className="tile-name">Foundation</span>
-          </div>
-          <div className="tile active">
-            <span className="tile-label">PHASE 2</span>
-            <span className="tile-name">Domain Deep-Dive</span>
-          </div>
-          <div className="tile locked">
-            <span className="tile-label">PHASE 3</span>
-            <span className="tile-name">Mock Readiness</span>
-          </div>
-        </section>
-
-        {/* CURRENT GOAL CARD: Highlighted Domain */}
-        <section className="goal-card">
-          <div className="goal-content">
-            <span className="tag">CURRENT FOCUS</span>
-            <h2>Domain 1: Information Systems Auditing Process</h2>
-            <div className="progress-container">
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill" data-progress="90"></div>
-              </div>
-              <span className="progress-text">90% of Domain 1 Mastered</span>
-            </div>
-          </div>
-          <button className="resume-btn" onClick={() => setOpenDomain(DOMAINS[0].name)}>
-            Resume Session
-          </button>
-        </section>
-
-        {/* DOMAIN ACCORDION LIST */}
         <section className="domains-container">
           <h3 className="section-title">Knowledge Domains</h3>
-          <div className="sp-domains">
-            {DOMAINS.map((domain) => {
-              const isOpen = openDomain === domain.name;
+          {loading ? (
+            <p style={{ color: "rgba(255,255,255,0.5)", padding: "20px 0" }}>Loading...</p>
+          ) : (
+            <div className="sp-domains">
+              {Object.entries(DOMAIN_NAMES).map(([code, name]) => {
+                const isOpen = openDomain === code;
+                const domainCategories = getCategoriesForDomain(code);
 
-              return (
-                <div key={domain.name} className="sp-domain">
-                  <div
-                    className="sp-domain-header"
-                    onClick={() => setOpenDomain(isOpen ? null : domain.name)}
-                  >
-                    <span>{domain.name}</span>
-                    <span className="chevron">{isOpen ? "▾" : "▸"}</span>
-                  </div>
+                // Domain-level progress
+                const domainAttempted = domainCategories.reduce((s, c) => s + (progress[c.name]?.attempted ?? 0), 0);
+                const domainCorrect = domainCategories.reduce((s, c) => s + (progress[c.name]?.correct ?? 0), 0);
+                const domainTotal = domainCategories.reduce((s, c) => s + c.count, 0);
+                const domainPct = domainTotal > 0 ? Math.min(100, Math.round((domainAttempted / domainTotal) * 100)) : 0;
+                const domainAccuracy = domainAttempted > 0 ? Math.round((domainCorrect / domainAttempted) * 100) : null;
 
-                  {isOpen && (
-                    <div className="sp-domain-tasks">
-                      {domain.tasks.map((task) => {
-                        const qCount = getQuestionCount(task);
-                        return (
-                          <div key={task} className="sp-task">
-                            <div className="task-info">
-                              <strong>{task}</strong>
-                              <span>{qCount} Questions Available</span>
-                            </div>
-                            <button
-                              disabled={qCount === 0}
-                              className={qCount === 0 ? "btn-disabled" : "study-btn"}
-                              onClick={() =>
-                                navigate(`/study/session/${encodeURIComponent(task)}`)
-                              }
-                            >
-                              {qCount > 0 ? "Study" : "Coming Soon"}
-                            </button>
+                return (
+                  <div key={code} className="sp-domain">
+                    <div
+                      className="sp-domain-header"
+                      onClick={() => setOpenDomain(isOpen ? null : code)}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: domainPct > 0 ? 6 : 0 }}>
+                          <span>{name}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {domainAccuracy !== null && (
+                              <span style={{ fontSize: 12, fontWeight: 600, color: domainAccuracy >= 75 ? "#4ade80" : domainAccuracy >= 60 ? "#fbbf24" : "#f87171" }}>
+                                {domainAccuracy}% correct
+                              </span>
+                            )}
+                            {domainPct > 0 && (
+                              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.50)" }}>{domainPct}%</span>
+                            )}
+                            <span className="chevron">{isOpen ? "▾" : "▸"}</span>
                           </div>
-                        );
-                      })}
+                        </div>
+                        {domainPct > 0 && (
+                          <div style={{ height: 3, borderRadius: 999, background: "rgba(255,255,255,0.10)", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${domainPct}%`, background: "#3b82f6", borderRadius: 999 }} />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
-        {/* BOTTOM METRICS FOOTER */}
-        <footer className="bottom-stats">
-          <div className="stat-box">
-            <label>Daily Target</label>
-            <strong>12 Questions Left</strong>
-          </div>
-          <div className="stat-box">
-            <label>Exam Date</label>
-            <strong>Jan 22 (11 Days)</strong>
-          </div>
-          <div className="stat-box highlight">
-            <label>Mastery Streak</label>
-            <strong>Top 10% Overall</strong>
-          </div>
-        </footer>
+                    {isOpen && (
+                      <div className="sp-domain-tasks">
+                        {domainCategories.length === 0 ? (
+                          <p style={{ padding: "12px 16px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
+                            No questions available yet.
+                          </p>
+                        ) : (
+                          domainCategories.map((cat) => {
+                            const p = progress[cat.name];
+                            const pct = p ? Math.min(100, Math.round((p.attempted / cat.count) * 100)) : 0;
+                            const accuracy = p && p.attempted > 0 ? Math.round((p.correct / p.attempted) * 100) : null;
+                            const accuracyColor = accuracy === null ? "#94a3b8" : accuracy >= 75 ? "#4ade80" : accuracy >= 60 ? "#fbbf24" : "#f87171";
+
+                            return (
+                              <div key={cat.name} className="sp-task" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <strong style={{ fontSize: 13 }}>{cat.name}</strong>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    {accuracy !== null && (
+                                      <span style={{ fontSize: 12, fontWeight: 600, color: accuracyColor }}>{accuracy}%</span>
+                                    )}
+                                    <button
+                                      className="study-btn"
+                                      onClick={() => navigate(`/session/study/${encodeURIComponent(cat.name)}`)}
+                                    >
+                                      {pct > 0 ? "Study Again" : "Study"}
+                                    </button>
+                                  </div>
+                                </div>
+                                {/* Progress bar */}
+                                <div style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: pct === 100 ? "#4ade80" : "#3b82f6", borderRadius: 999, transition: "width 0.3s" }} />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

@@ -16,7 +16,7 @@ export default function StreakChallengePage() {
     return (
       <StreakChallengeGame
         mode={mode}
-        onExit={() => navigate("/game-center")}
+        onExit={() => navigate("/games")}
       />
     );
   }
@@ -75,7 +75,7 @@ export default function StreakChallengePage() {
 
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/game-center")}
+            onClick={() => navigate("/games")}
           >
             Back to Game Center
           </button>

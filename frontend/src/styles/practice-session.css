@@ -1,0 +1,251 @@
+.ps-page {
+  padding: 24px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+  color: #1f2937;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+.ps-status {
+  padding: 40px 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+.ps-status--error {
+  color: #b91c1c;
+}
+
+.ps-header,
+.ps-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ps-header h1,
+.ps-results-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ps-back-btn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.ps-back-btn:hover {
+  background-color: #f9fafb;
+}
+
+/* Progress */
+
+.ps-progress-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.ps-progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.ps-progress-fill {
+  height: 100%;
+  background-color: #2563eb;
+  border-radius: 999px;
+  transition: width 0.2s ease-out;
+}
+
+/* Question card */
+
+.ps-question-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 20px;
+  color: var(--text);  /* ADD THIS */
+}
+
+.ps-question-text {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.ps-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ps-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+  color: var(--text);  /* ADD THIS */
+  background: var(--card-bg);  /* ADD THIS */
+}
+
+.ps-choice:hover {
+  border-color: #93c5fd;
+  background-color: #f8fafc;
+}
+
+.ps-choice.is-selected {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.ps-choice-label {
+  font-weight: 600;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.ps-choice-text {
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.ps-next-btn {
+  display: block;
+  margin-left: auto;
+  background-color: #1f2a44;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-next-btn:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Results */
+
+.ps-score-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.ps-score-value {
+  font-size: 40px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ps-score-caption {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.ps-retry-btn {
+  display: block;
+  margin: 0 auto 28px auto;
+  background: none;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-retry-btn:hover {
+  background-color: #eff6ff;
+}
+
+.ps-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ps-review-item {
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 16px 18px;
+  background: #ffffff;
+}
+
+.ps-review-item.is-correct {
+  border-left-color: #16a34a;
+}
+
+.ps-review-item.is-incorrect {
+  border-left-color: #dc2626;
+}
+
+.ps-review-question {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ps-review-answer {
+  font-size: 14px;
+  color: #374151;
+}
+
+.ps-review-correct {
+  font-size: 14px;
+  color: #16a34a;
+  margin-top: 4px;
+}
+
+.ps-review-justification {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* Check mode states */
+.ps-choice.is-correct {
+  border-color: var(--success) !important;
+  background: rgba(22, 163, 74, 0.08) !important;
+}
+
+.ps-choice.is-incorrect {
+  border-color: var(--danger) !important;
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+.ps-choice.is-dimmed {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ps-review-item.is-skipped {
+  border-left-color: var(--muted);
+}

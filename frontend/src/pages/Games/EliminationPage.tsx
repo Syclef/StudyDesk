@@ -11,7 +11,7 @@ export default function EliminationPage() {
 
   if (started) {
     return (
-      <EliminationGame onExit={() => navigate("/game-center")} />
+      <EliminationGame onExit={() => navigate("/games")} />
     );
   }
 
@@ -50,7 +50,7 @@ export default function EliminationPage() {
 
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/game-center")}
+            onClick={() => navigate("/games")}
           >
             Back to Game Center
           </button>

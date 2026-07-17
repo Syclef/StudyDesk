@@ -1,0 +1,1082 @@
+[
+  {
+    "id": 1,
+    "term": "Acceptable use policy (AUP)",
+    "definition": "A policy that establishes an agreement between users and the enterprise that defines, for all parties, the ranges of use that are approved before gaining access to a network or the Internet."
+  },
+  {
+    "id": 2,
+    "term": "Access control",
+    "definition": "The processes, rules and deployment mechanisms that control access to information systems, resources and physical access to premises."
+  },
+  {
+    "id": 3,
+    "term": "Access control list (ACL)",
+    "definition": "An internal computerized table of access rules regarding the levels of computer access permitted to logon IDs and computer terminals."
+  },
+  {
+    "id": 4,
+    "term": "Access control table",
+    "definition": "An internal computerized table of access rules regarding the levels of computer access permitted to logon IDs and computer terminals."
+  },
+  {
+    "id": 5,
+    "term": "Access method",
+    "definition": "The technique used for selecting records in a file, one at a time, for processing, retrieval or storage. The access method is related to, but distinct from, the file organization, which determines how the records are stored."
+  },
+  {
+    "id": 6,
+    "term": "Access rights",
+    "definition": "The permission or privileges granted to users, programs or workstations to create, change, delete or view data and files within a system, as defined by rules established by data owners and the information security policy."
+  },
+  {
+    "id": 7,
+    "term": "Administrative controls",
+    "definition": "The rules, procedures and practices dealing with operational effectiveness, efficiency and adherence to regulations and management policies."
+  },
+  {
+    "id": 8,
+    "term": "Anonymous File Transfer Protocol (AFTP)",
+    "definition": "A method of downloading public files using the File Transfer Protocol (FTP). AFTP does not require users to identify themselves before accessing files from a particular server. In general, users enter the word \"anonymous\" when the host prompts for a username. Anything can be entered for the password, such as the user's email address or simply the word \"guest.\" In many cases, an AFTP site will not prompt a user for a name and password."
+  },
+  {
+    "id": 9,
+    "term": "Antivirus software",
+    "definition": "An application software deployed at multiple points in an IT architecture. It is designed to detect and potentially eliminate virus code before damage is done and repair or quarantine files that have already been infected."
+  },
+  {
+    "id": 10,
+    "term": "Application",
+    "definition": "A computer program or set of programs that performs the processing of records for a specific function."
+  },
+  {
+    "id": 11,
+    "term": "Application controls",
+    "definition": "The policies, procedures and activities designed to provide reasonable assurance that objectives relevant to a given automated solution (application) are achieved."
+  },
+  {
+    "id": 12,
+    "term": "Application layer",
+    "definition": "The application layer provides services for an application program to ensure that effective communication with another application program in a network is possible in the Open Systems Interconnection (OSI) communications model."
+  },
+  {
+    "id": 13,
+    "term": "Application programming interface (API)",
+    "definition": "A set of routines, protocols and tools referred to as building blocks used in business application software development."
+  },
+  {
+    "id": 14,
+    "term": "Artificial intelligence (AI)",
+    "definition": "An advanced computer system that can simulate human capabilities, such as analysis, based on a predetermined set of rules."
+  },
+  {
+    "id": 15,
+    "term": "Asymmetric key (public key)",
+    "definition": "A cipher technique in which different cryptographic keys are used to encrypt and decrypt a message."
+  },
+  {
+    "id": 16,
+    "term": "Audit evidence",
+    "definition": "The information used to support the audit opinion."
+  },
+  {
+    "id": 17,
+    "term": "Audit objective",
+    "definition": "The specific goal(s) of an audit."
+  },
+  {
+    "id": 18,
+    "term": "Audit plan",
+    "definition": "A plan containing the nature, timing and extent of audit procedures to be performed by engagement team members in order to obtain sufficient appropriate audit evidence to form an opinion."
+  },
+  {
+    "id": 19,
+    "term": "Audit program",
+    "definition": "A step-by-step set of audit procedures and instructions that should be performed to complete an audit."
+  },
+  {
+    "id": 20,
+    "term": "Audit risk",
+    "definition": "The risk of reaching an incorrect conclusion based upon audit findings."
+  },
+  {
+    "id": 21,
+    "term": "Audit trail",
+    "definition": "A logical path linking a sequence of events, in the form of data, used to trace the transactions that have affected the contents of a record."
+  },
+  {
+    "id": 22,
+    "term": "Authentication",
+    "definition": "The act of verifying the identity of a user, the user's eligibility to access computerized information."
+  },
+  {
+    "id": 23,
+    "term": "Backup",
+    "definition": "The files, equipment, data and procedures available for use in the event of a failure or loss, if the originals are destroyed or out of service."
+  },
+  {
+    "id": 24,
+    "term": "Balanced scorecard (BSC)",
+    "definition": "A coherent set of performance measures organized into four categories that include traditional financial measures and customer, internal business process and learning and growth perspectives."
+  },
+  {
+    "id": 25,
+    "term": "Benchmarking",
+    "definition": "A systematic approach to comparing enterprise performance against peers and competitors in an effort to learn the best ways of conducting business."
+  },
+  {
+    "id": 26,
+    "term": "Biometrics",
+    "definition": "A security technique that verifies an individual's identity by analyzing a unique physical attribute, such as a handprint."
+  },
+  {
+    "id": 27,
+    "term": "Black box testing",
+    "definition": "A testing approach that focuses on the functionality of the application or product and does not require knowledge of the code intervals."
+  },
+  {
+    "id": 28,
+    "term": "Broadband",
+    "definition": "Multiple channels that are formed by dividing the transmission medium into discrete frequency segments."
+  },
+  {
+    "id": 29,
+    "term": "Brouter",
+    "definition": "A device that performs the functions of both a bridge and a router."
+  },
+  {
+    "id": 30,
+    "term": "Bus",
+    "definition": "A common path or channel between hardware devices."
+  },
+  {
+    "id": 31,
+    "term": "Bus configuration",
+    "definition": "A configuration in which all devices (nodes) are linked along one communication line where transmissions are received by all attached nodes."
+  },
+  {
+    "id": 32,
+    "term": "Business case",
+    "definition": "Documentation of the rationale for making a business investment that is used both to support a business decision on whether to proceed with the investment and as an operational tool to support management of the investment through its full economic life cycle."
+  },
+  {
+    "id": 33,
+    "term": "Business continuity plan (BCP)",
+    "definition": "A plan used by an enterprise to respond to the disruption of critical business processes."
+  },
+  {
+    "id": 34,
+    "term": "Business impact analysis (BIA)",
+    "definition": "The process of evaluating the criticality and sensitivity of information assets by determining the impact of losing the support of any resource to an enterprise."
+  },
+  {
+    "id": 35,
+    "term": "Business process reengineering (BPR)",
+    "definition": "The thorough analysis and significant redesign of business processes and management systems to establish a better-performing structure that is more responsive to the customer base and market conditions while yielding material cost savings."
+  },
+  {
+    "id": 36,
+    "term": "Business risk",
+    "definition": "The probability that a situation with uncertain frequency and magnitude of loss (or gain) could prevent the enterprise from meeting its business objectives."
+  },
+  {
+    "id": 37,
+    "term": "Capability Maturity Model Integration (CMMI)",
+    "definition": "An integrated model of best practices that enable businesses to improve performance by improving their processes."
+  },
+  {
+    "id": 38,
+    "term": "Card swipe",
+    "definition": "A physical control technique that uses a secured card or ID to gain access to a highly sensitive location."
+  },
+  {
+    "id": 39,
+    "term": "Central processing unit (CPU)",
+    "definition": "The main processing unit of a computer. It is the part of a computer that performs the arithmetic, logical and control functions."
+  },
+  {
+    "id": 40,
+    "term": "Change control",
+    "definition": "A formal process used to ensure that changes to a system or product are introduced in a controlled and coordinated manner."
+  },
+  {
+    "id": 41,
+    "term": "Change management",
+    "definition": "A structured approach to managing the transition of individuals, teams and organizations from a current state to a desired future state."
+  },
+  {
+    "id": 42,
+    "term": "Chief information officer (CIO)",
+    "definition": "The senior executive responsible for the enterprise’s information systems and technology strategy."
+  },
+  {
+    "id": 43,
+    "term": "Chief information security officer (CISO)",
+    "definition": "The senior executive responsible for developing and implementing the enterprise information security program."
+  },
+  {
+    "id": 44,
+    "term": "Cloud computing",
+    "definition": "A model for enabling convenient, on-demand network access to a shared pool of configurable computing resources that can be rapidly provisioned and released with minimal management effort or service provider interaction."
+  },
+  {
+    "id": 45,
+    "term": "Cloud service provider (CSP)",
+    "definition": "An organization that offers cloud computing services, including infrastructure, platforms or software, to customers."
+  },
+  {
+    "id": 46,
+    "term": "Computer-assisted audit techniques (CAATs)",
+    "definition": "Tools and techniques used by auditors to automate or simplify audit procedures."
+  },
+  {
+    "id": 47,
+    "term": "Computer crime",
+    "definition": "Any illegal act involving a computer system in which the computer is used as a tool, target or means of committing the act."
+  },
+  {
+    "id": 48,
+    "term": "Computer operations",
+    "definition": "The day-to-day management of computer systems, including job scheduling, system monitoring and backup procedures."
+  },
+  {
+    "id": 49,
+    "term": "Configuration management",
+    "definition": "The process of identifying, controlling and maintaining configuration items and their relationships throughout the system life cycle."
+  },
+  {
+    "id": 50,
+    "term": "Confidentiality",
+    "definition": "The protection of sensitive information from unauthorized disclosure."
+  },
+  {
+    "id": 51,
+    "term": "Control objective",
+    "definition": "A statement of the desired result or purpose to be achieved by implementing control procedures in a particular process."
+  },
+  {
+    "id": 52,
+    "term": "Corrective control",
+    "definition": "A control designed to correct errors or irregularities that have been detected."
+  },
+  {
+    "id": 53,
+    "term": "Critical success factor (CSF)",
+    "definition": "The most important elements that must be achieved for a process or activity to be successful."
+  },
+  {
+    "id": 54,
+    "term": "Data integrity",
+    "definition": "The accuracy, completeness and consistency of data throughout its life cycle."
+  },
+  {
+    "id": 55,
+    "term": "Data owner",
+    "definition": "The individual or group responsible for classifying data and defining access rights and usage rules."
+  },
+  {
+    "id": 56,
+    "term": "Data processing",
+    "definition": "The systematic manipulation of data to produce information."
+  },
+  {
+    "id": 57,
+    "term": "Data structure",
+    "definition": "The arrangement of data in a computer system so that it can be used efficiently."
+  },
+  {
+    "id": 58,
+    "term": "Database",
+    "definition": "A collection of data arranged for ease and speed of search and retrieval."
+  },
+  {
+    "id": 59,
+    "term": "Database administrator (DBA)",
+    "definition": "An individual responsible for the management and maintenance of a database environment."
+  },
+  {
+    "id": 60,
+    "term": "Database management system (DBMS)",
+    "definition": "Software that controls the organization, storage, management and retrieval of data in a database."
+  },
+  {
+    "id": 61,
+    "term": "Data dictionary",
+    "definition": "A repository of information about data elements, including meaning, relationships, origin, usage and format."
+  },
+  {
+    "id": 62,
+    "term": "Data encryption",
+    "definition": "The process of converting plain text data into an unreadable form to protect its confidentiality."
+  },
+  {
+    "id": 63,
+    "term": "Data leakage",
+    "definition": "The unauthorized transmission of data from within an organization to an external destination or recipient."
+  },
+  {
+    "id": 64,
+    "term": "Data mining",
+    "definition": "The process of analyzing large data sets to discover patterns, trends or relationships."
+  },
+  {
+    "id": 65,
+    "term": "Data owner",
+    "definition": "The individual or group responsible for classifying data and defining access rights and usage rules."
+  },
+  {
+    "id": 66,
+    "term": "Data processing cycle",
+    "definition": "The sequence of steps through which data is input, processed, stored and output."
+  },
+  {
+    "id": 67,
+    "term": "Data validation",
+    "definition": "The process of ensuring that data entered into a system meets defined criteria and is accurate and complete."
+  },
+  {
+    "id": 68,
+    "term": "Decision support system (DSS)",
+    "definition": "An interactive computer-based system that supports decision-making activities."
+  },
+  {
+    "id": 69,
+    "term": "Defense in depth",
+    "definition": "A layered security approach that employs multiple defensive mechanisms to protect information assets."
+  },
+  {
+    "id": 70,
+    "term": "Denial-of-service (DoS) attack",
+    "definition": "An attack that attempts to make a system or network unavailable to its intended users by overwhelming it with traffic."
+  },
+  {
+    "id": 71,
+    "term": "Detective control",
+    "definition": "A control designed to detect errors, omissions or unauthorized activities."
+  },
+  {
+    "id": 72,
+    "term": "Digital signature",
+    "definition": "A cryptographic mechanism used to validate the authenticity and integrity of a digital message or document."
+  },
+  {
+    "id": 73,
+    "term": "Disaster recovery plan (DRP)",
+    "definition": "A documented process or set of procedures to recover and protect a business IT infrastructure in the event of a disaster."
+  },
+  {
+    "id": 74,
+    "term": "Distributed processing",
+    "definition": "A processing model in which computing tasks are distributed across multiple systems."
+  },
+  {
+    "id": 75,
+    "term": "Due care",
+    "definition": "The level of care that a reasonable person would exercise under similar circumstances."
+  },
+  {
+    "id": 76,
+    "term": "Due diligence",
+    "definition": "The level of judgment, care, prudence, determination and activity that a reasonable person would exercise under particular circumstances."
+  },
+  {
+    "id": 77,
+    "term": "Encryption",
+    "definition": "The conversion of data into a form that cannot be easily understood by unauthorized individuals."
+  },
+  {
+    "id": 78,
+    "term": "End-user computing (EUC)",
+    "definition": "Information systems in which end users develop or control their own applications."
+  },
+  {
+    "id": 79,
+    "term": "Enterprise architecture (EA)",
+    "definition": "A comprehensive framework used to manage and align an enterprise’s business processes, information systems and technology infrastructure with its strategic objectives."
+  },
+  {
+    "id": 80,
+    "term": "Enterprise risk management (ERM)",
+    "definition": "A structured and consistent approach for identifying, assessing, managing and monitoring risks across the enterprise."
+  },
+  {
+    "id": 81,
+    "term": "Evidence",
+    "definition": "Information used to support the conclusions and opinions of an audit."
+  },
+  {
+    "id": 82,
+    "term": "Expert system",
+    "definition": "A computer-based system that emulates the decision-making ability of a human expert."
+  },
+  {
+    "id": 83,
+    "term": "Exposure",
+    "definition": "The potential loss to an enterprise if a threat materializes."
+  },
+  {
+    "id": 84,
+    "term": "Failover",
+    "definition": "The automatic transfer of processing from a failed system to a backup system."
+  },
+  {
+    "id": 85,
+    "term": "Feasibility study",
+    "definition": "An evaluation of a proposed project to determine whether it is technically, economically and operationally viable."
+  },
+  {
+    "id": 86,
+    "term": "Firewall",
+    "definition": "A system designed to prevent unauthorized access to or from a private network."
+  },
+  {
+    "id": 87,
+    "term": "Forensic analysis",
+    "definition": "The application of investigative and analytical techniques to gather and preserve evidence from computing devices."
+  },
+  {
+    "id": 88,
+    "term": "General controls",
+    "definition": "Controls that apply to all or most information systems to ensure proper operation and security."
+  },
+  {
+    "id": 89,
+    "term": "Governance",
+    "definition": "The set of responsibilities and practices exercised by the board and executive management to provide strategic direction and ensure objectives are achieved."
+  },
+  {
+    "id": 90,
+    "term": "Hashing",
+    "definition": "A process that converts input data into a fixed-length value or hash."
+  },
+  {
+    "id": 91,
+    "term": "Hot site",
+    "definition": "A fully operational alternate processing facility equipped with hardware, software and data to resume operations immediately."
+  },
+  {
+    "id": 92,
+    "term": "Incident response",
+    "definition": "The organized approach to addressing and managing the aftermath of a security breach or cyberattack."
+  },
+  {
+    "id": 93,
+    "term": "Information asset",
+    "definition": "Data, systems and other information resources that support business processes."
+  },
+  {
+    "id": 94,
+    "term": "Information security",
+    "definition": "The protection of information and information systems from unauthorized access, use, disclosure, disruption, modification or destruction."
+  },
+  {
+    "id": 95,
+    "term": "Inherent risk",
+    "definition": "The level of risk that exists before considering the effect of any controls."
+  },
+  {
+    "id": 96,
+    "term": "Input controls",
+    "definition": "Controls designed to ensure the accuracy, completeness and authorization of data entered into a system."
+  },
+  {
+    "id": 97,
+    "term": "Integrated test facility (ITF)",
+    "definition": "A technique that allows the auditor to test application controls by introducing test transactions into the production system."
+  },
+  {
+    "id": 98,
+    "term": "Intellectual property",
+    "definition": "Intangible property that includes inventions, literary and artistic works, symbols, names and images used in commerce."
+  },
+  {
+    "id": 99,
+    "term": "Interface controls",
+    "definition": "Controls that ensure data is properly transferred between systems or components."
+  },
+  {
+    "id": 100,
+    "term": "Intrusion detection system (IDS)",
+    "definition": "A system that monitors network or system activities for malicious actions or policy violations."
+  },
+  {
+    "id": 101,
+    "term": "Intrusion prevention system (IPS)",
+    "definition": "A system that monitors network traffic and actively blocks detected threats."
+  },
+  {
+    "id": 102,
+    "term": "IT governance",
+    "definition": "The leadership, organizational structures and processes that ensure that information technology sustains and extends the enterprise’s strategies and objectives."
+  },
+  {
+    "id": 103,
+    "term": "IT infrastructure",
+    "definition": "The hardware, software, networks, data centers and facilities that support enterprise IT operations."
+  },
+  {
+    "id": 104,
+    "term": "IT risk",
+    "definition": "The risk associated with the use, ownership, operation, involvement, influence and adoption of information technology within an enterprise."
+  },
+  {
+    "id": 105,
+    "term": "Key risk indicator (KRI)",
+    "definition": "A metric used to provide an early signal of increasing risk exposure in various areas of the enterprise."
+  },
+  {
+    "id": 106,
+    "term": "Logical access",
+    "definition": "The ability of a user to interact with computer resources through identification and authentication mechanisms."
+  },
+  {
+    "id": 107,
+    "term": "Malware",
+    "definition": "Software designed to disrupt, damage or gain unauthorized access to computer systems."
+  },
+  {
+    "id": 108,
+    "term": "Management controls",
+    "definition": "Controls that ensure the effectiveness and efficiency of management processes."
+  },
+  {
+    "id": 109,
+    "term": "Materiality",
+    "definition": "The magnitude of an omission or misstatement that could influence the judgment of a reasonable person relying on the information."
+  },
+  {
+    "id": 110,
+    "term": "Mitigation",
+    "definition": "The implementation of controls to reduce the likelihood or impact of a risk."
+  },
+  {
+    "id": 111,
+    "term": "Monitoring",
+    "definition": "The process of assessing the performance and effectiveness of controls over time."
+  },
+  {
+    "id": 112,
+    "term": "Multifactor authentication (MFA)",
+    "definition": "An authentication method that requires two or more verification factors to gain access to a system."
+  },
+  {
+    "id": 113,
+    "term": "Network topology",
+    "definition": "The physical or logical arrangement of network components."
+  },
+  {
+    "id": 114,
+    "term": "Nonrepudiation",
+    "definition": "The assurance that a party to a transaction cannot deny having participated in the transaction."
+  },
+  {
+    "id": 115,
+    "term": "Object-oriented programming (OOP)",
+    "definition": "A programming paradigm based on the concept of objects that contain data and methods."
+  },
+  {
+    "id": 116,
+    "term": "Operating system (OS)",
+    "definition": "System software that manages computer hardware, software resources and provides common services for computer programs."
+  },
+  {
+    "id": 117,
+    "term": "Penetration testing",
+    "definition": "A method of evaluating the security of a system by simulating attacks from malicious sources."
+  },
+  {
+    "id": 118,
+    "term": "Physical access",
+    "definition": "The ability to physically interact with information systems, equipment or facilities."
+  },
+  {
+    "id": 119,
+    "term": "Physical controls",
+    "definition": "Controls that prevent unauthorized physical access to facilities, systems or resources."
+  },
+  {
+    "id": 120,
+    "term": "Preventive control",
+    "definition": "A control designed to prevent errors, omissions or unauthorized activities from occurring."
+  },
+  {
+    "id": 121,
+    "term": "Primary key",
+    "definition": "A field or combination of fields that uniquely identifies a record in a database."
+  },
+  {
+    "id": 122,
+    "term": "Privacy",
+    "definition": "The right of individuals to control the collection, use and disclosure of their personal information."
+  },
+  {
+    "id": 123,
+    "term": "Project governance",
+    "definition": "The framework that ensures projects align with enterprise objectives and deliver expected value."
+  },
+  {
+    "id": 124,
+    "term": "Project management",
+    "definition": "The application of knowledge, skills, tools and techniques to project activities to meet project requirements."
+  },
+  {
+    "id": 125,
+    "term": "Qualitative risk analysis",
+    "definition": "A risk assessment method that evaluates risk based on descriptive characteristics rather than numerical values."
+  },
+  {
+    "id": 126,
+    "term": "Quantitative risk analysis",
+    "definition": "A risk assessment method that uses numerical data and statistical techniques to evaluate risk."
+  },
+  {
+    "id": 127,
+    "term": "Recovery point objective (RPO)",
+    "definition": "The maximum tolerable period in which data might be lost due to a major incident."
+  },
+  {
+    "id": 128,
+    "term": "Recovery time objective (RTO)",
+    "definition": "The targeted duration of time within which a business process must be restored after a disruption."
+  },
+  {
+    "id": 129,
+    "term": "Residual risk",
+    "definition": "The level of risk that remains after controls have been applied."
+  },
+  {
+    "id": 130,
+    "term": "Risk appetite",
+    "definition": "The amount and type of risk that an enterprise is willing to pursue or retain."
+  },
+  {
+    "id": 131,
+    "term": "Risk assessment",
+    "definition": "The process of identifying, analyzing and evaluating risks."
+  },
+  {
+    "id": 132,
+    "term": "Risk management",
+    "definition": "The coordinated activities to direct and control an enterprise with regard to risk."
+  },
+  {
+    "id": 133,
+    "term": "Risk mitigation",
+    "definition": "The implementation of controls to reduce risk to an acceptable level."
+  },
+  {
+    "id": 134,
+    "term": "Risk tolerance",
+    "definition": "The acceptable level of variation an enterprise is willing to accept in achieving its objectives."
+  },
+  {
+    "id": 135,
+    "term": "Root cause analysis",
+    "definition": "A structured approach to identifying the fundamental cause of a problem."
+  },
+  {
+    "id": 136,
+    "term": "Safeguards",
+    "definition": "Protective measures designed to reduce risk or prevent loss."
+  },
+  {
+    "id": 137,
+    "term": "Separation of duties (SoD)",
+    "definition": "A control principle that requires that no single individual has control over all phases of a transaction."
+  },
+  {
+    "id": 138,
+    "term": "Service level agreement (SLA)",
+    "definition": "A documented agreement between a service provider and customer that identifies services, performance targets and responsibilities."
+  },
+  {
+    "id": 139,
+    "term": "Single point of failure (SPOF)",
+    "definition": "A component whose failure would cause an entire system to fail."
+  },
+  {
+    "id": 140,
+    "term": "Social engineering",
+    "definition": "The use of deception to manipulate individuals into divulging confidential information."
+  },
+  {
+    "id": 141,
+    "term": "Software development life cycle (SDLC)",
+    "definition": "A structured approach to developing, maintaining and retiring information systems."
+  },
+  {
+    "id": 142,
+    "term": "Source code",
+    "definition": "The human-readable instructions written by programmers to create software."
+  },
+  {
+    "id": 143,
+    "term": "Stakeholder",
+    "definition": "An individual or group that has an interest in or is affected by an enterprise’s activities."
+  },
+  {
+    "id": 144,
+    "term": "Strategic alignment",
+    "definition": "The degree to which IT strategy supports and is supported by business strategy."
+  },
+  {
+    "id": 145,
+    "term": "System development methodology",
+    "definition": "A formal approach to planning, designing, implementing and maintaining information systems."
+  },
+  {
+    "id": 146,
+    "term": "System life cycle",
+    "definition": "The stages an information system goes through from inception to retirement."
+  },
+  {
+    "id": 147,
+    "term": "System software",
+    "definition": "Software designed to manage and support computer hardware and application programs."
+  },
+  {
+    "id": 148,
+    "term": "Technical controls",
+    "definition": "Controls implemented through technology to protect information systems."
+  },
+  {
+    "id": 149,
+    "term": "Threat",
+    "definition": "A potential event that could exploit a vulnerability and cause harm to an asset."
+  },
+  {
+    "id": 150,
+    "term": "Top management",
+    "definition": "The highest level of management responsible for setting enterprise direction and policy."
+  },
+  {
+    "id": 151,
+    "term": "Total cost of ownership (TCO)",
+    "definition": "The total cost of acquiring, operating and maintaining an asset over its life cycle."
+  },
+  {
+    "id": 152,
+    "term": "Transaction",
+    "definition": "A business event that can be measured and recorded."
+  },
+  {
+    "id": 153,
+    "term": "Transmission control protocol/internet protocol (TCP/IP)",
+    "definition": "A set of communication protocols used to connect network devices on the internet."
+  },
+  {
+    "id": 154,
+    "term": "Unauthorized access",
+    "definition": "Access to systems or data by individuals without permission."
+  },
+  {
+    "id": 155,
+    "term": "User acceptance testing (UAT)",
+    "definition": "Testing performed by end users to determine whether a system meets business requirements."
+  },
+  {
+    "id": 156,
+    "term": "Vulnerability",
+    "definition": "A weakness in a system, application or process that could be exploited by a threat."
+  },
+  {
+    "id": 157,
+    "term": "Walkthrough",
+    "definition": "A review technique in which an auditor traces a transaction through a process to understand controls and identify weaknesses."
+  },
+  {
+    "id": 158,
+    "term": "White box testing",
+    "definition": "A testing approach that examines the internal logic, structure and code of an application."
+  },
+  {
+    "id": 159,
+    "term": "Wireless network",
+    "definition": "A network that uses radio waves rather than cables to transmit data."
+  },
+  {
+    "id": 160,
+    "term": "Workstation",
+    "definition": "A computer system designed for individual use in a professional environment."
+  },
+  {
+    "id": 161,
+    "term": "Zero-day exploit",
+    "definition": "An attack that exploits a previously unknown vulnerability for which no patch exists."
+  },
+  {
+    "id": 162,
+    "term": "Zero trust",
+    "definition": "A security model that assumes no implicit trust and requires continuous verification of users and devices."
+  },
+  {
+    "id": 163,
+    "term": "Availability",
+    "definition": "The degree to which information systems are operational and accessible when required."
+  },
+  {
+    "id": 164,
+    "term": "Authorization",
+    "definition": "The process of granting or denying access rights to resources based on authenticated identity."
+  },
+  {
+    "id": 165,
+    "term": "Baseline",
+    "definition": "A standard or reference point against which performance or controls can be measured."
+  },
+  {
+    "id": 166,
+    "term": "Change advisory board (CAB)",
+    "definition": "A group of stakeholders responsible for assessing and approving changes to IT services."
+  },
+  {
+    "id": 167,
+    "term": "Chief audit executive (CAE)",
+    "definition": "The senior executive responsible for internal audit activities within an organization."
+  },
+  {
+    "id": 168,
+    "term": "Control framework",
+    "definition": "A structured set of control objectives and practices used to manage and govern processes."
+  },
+  {
+    "id": 169,
+    "term": "Control risk",
+    "definition": "The risk that a control will fail to prevent or detect an error or irregularity."
+  },
+  {
+    "id": 170,
+    "term": "Corrective action",
+    "definition": "Steps taken to correct identified deficiencies or weaknesses."
+  },
+  {
+    "id": 171,
+    "term": "Cryptography",
+    "definition": "The practice and study of techniques for secure communication in the presence of adversaries."
+  },
+  {
+    "id": 172,
+    "term": "Data classification",
+    "definition": "The process of organizing data into categories based on sensitivity and criticality."
+  },
+  {
+    "id": 173,
+    "term": "Data governance",
+    "definition": "The framework of policies, processes and standards that ensure effective and efficient use of data."
+  },
+  {
+    "id": 174,
+    "term": "Information systems audit",
+    "definition": "An examination of information systems, controls and processes to ensure confidentiality, integrity and availability."
+  },
+  {
+    "id": 175,
+    "term": "Logging",
+    "definition": "The process of recording events and activities within a system."
+  },
+  {
+    "id": 176,
+    "term": "Patch management",
+    "definition": "The process of acquiring, testing and installing patches to maintain system security and stability."
+  },
+  {
+    "id": 177,
+    "term": "Policy",
+    "definition": "A high-level statement of intent that guides decision-making and sets direction for an enterprise."
+  },
+  {
+    "id": 178,
+    "term": "Procedure",
+    "definition": "A detailed set of instructions that describes how to perform a specific task or activity."
+  },
+  {
+    "id": 179,
+    "term": "Process",
+    "definition": "A set of related activities that transforms inputs into outputs to achieve a specific objective."
+  },
+  {
+    "id": 180,
+    "term": "Risk",
+    "definition": "The possibility of an event occurring that will have an impact on the achievement of objectives."
+  },
+  {
+    "id": 181,
+    "term": "Risk register",
+    "definition": "A documented repository of identified risks, their characteristics and planned responses."
+  },
+  {
+    "id": 182,
+    "term": "Risk response",
+    "definition": "The action taken to address risk, such as avoidance, mitigation, transfer or acceptance."
+  },
+  {
+    "id": 183,
+    "term": "Risk treatment",
+    "definition": "The process of selecting and implementing measures to modify risk."
+  },
+  {
+    "id": 184,
+    "term": "Security awareness",
+    "definition": "Activities designed to educate users about information security risks and responsibilities."
+  },
+  {
+    "id": 185,
+    "term": "Security incident",
+    "definition": "An adverse event that threatens the confidentiality, integrity or availability of information."
+  },
+  {
+    "id": 186,
+    "term": "Security policy",
+    "definition": "A formal document that defines an organization’s approach to information security."
+  },
+  {
+    "id": 187,
+    "term": "Service continuity",
+    "definition": "The capability of an organization to continue delivery of services at acceptable levels following a disruption."
+  },
+  {
+    "id": 188,
+    "term": "Service management",
+    "definition": "The implementation and management of quality IT services that meet business needs."
+  },
+  {
+    "id": 189,
+    "term": "Service provider",
+    "definition": "An internal or external organization that delivers services to customers."
+  },
+  {
+    "id": 190,
+    "term": "Service request",
+    "definition": "A formal request from a user for information, advice, access or a standard service."
+  },
+  {
+    "id": 191,
+    "term": "System availability",
+    "definition": "The proportion of time that a system is operational and accessible when required."
+  },
+  {
+    "id": 192,
+    "term": "System change",
+    "definition": "Any modification to system components, configuration or functionality."
+  },
+  {
+    "id": 193,
+    "term": "System testing",
+    "definition": "Testing performed to evaluate the complete and integrated system against requirements."
+  },
+  {
+    "id": 194,
+    "term": "Third-party risk",
+    "definition": "Risk arising from reliance on external vendors, suppliers or service providers."
+  },
+  {
+    "id": 195,
+    "term": "Threat assessment",
+    "definition": "The process of identifying and evaluating potential threats to information assets."
+  },
+  {
+    "id": 196,
+    "term": "Vulnerability assessment",
+    "definition": "A systematic examination of systems to identify security weaknesses."
+  },
+  {
+    "id": 197,
+    "term": "Virtual private network (VPN)",
+    "definition": "A secure communication method that uses encryption to protect data transmitted over public networks."
+  },
+  {
+    "id": 198,
+    "term": "Virtualization",
+    "definition": "The creation of virtual versions of computing resources such as servers, storage or networks."
+  },
+  {
+    "id": 199,
+    "term": "Virus",
+    "definition": "Malicious software that attaches itself to a legitimate program and spreads when the program is executed."
+  },
+  {
+    "id": 200,
+    "term": "Voice over Internet Protocol (VoIP)",
+    "definition": "A technology that enables voice communications over IP networks."
+  },
+  {
+    "id": 201,
+    "term": "Vulnerability management",
+    "definition": "The ongoing process of identifying, assessing and remediating security vulnerabilities."
+  },
+  {
+    "id": 202,
+    "term": "Web application firewall (WAF)",
+    "definition": "A security control that monitors and filters HTTP traffic to protect web applications."
+  },
+  {
+    "id": 203,
+    "term": "Wireless access point",
+    "definition": "A networking device that allows wireless devices to connect to a wired network."
+  },
+  {
+    "id": 204,
+    "term": "Work program",
+    "definition": "A detailed document outlining audit procedures to be performed."
+  },
+  {
+    "id": 205,
+    "term": "Workpaper",
+    "definition": "Documentation that records the procedures performed, evidence obtained and conclusions reached during an audit."
+  },
+  {
+    "id": 206,
+    "term": "Workflow",
+    "definition": "A sequence of tasks through which a piece of work passes from initiation to completion."
+  },
+  {
+    "id": 207,
+    "term": "Zero trust architecture",
+    "definition": "A security architecture that enforces strict identity verification for every user and device attempting to access resources."
+  },
+  {
+    "id": 208,
+    "term": "Zombie",
+    "definition": "A compromised computer controlled remotely by an attacker as part of a botnet."
+  },
+  {
+    "id": 209,
+    "term": "Availability management",
+    "definition": "The practice of ensuring IT services are designed and operated to meet availability requirements."
+  },
+  {
+    "id": 210,
+    "term": "Capacity management",
+    "definition": "The process of ensuring that IT infrastructure has sufficient capacity to meet current and future demands."
+  },
+  {
+    "id": 211,
+    "term": "Configuration item (CI)",
+    "definition": "A component that must be managed to deliver an IT service."
+  },
+  {
+    "id": 212,
+    "term": "Incident management",
+    "definition": "The process of restoring normal service operation as quickly as possible after an incident."
+  },
+  {
+    "id": 213,
+    "term": "Information classification",
+    "definition": "The process of categorizing information based on sensitivity and importance."
+  },
+  {
+    "id": 214,
+    "term": "IT service management (ITSM)",
+    "definition": "The implementation and management of quality IT services that meet the needs of the business."
+  },
+  {
+    "id": 215,
+    "term": "Operational risk",
+    "definition": "The risk of loss resulting from inadequate or failed internal processes, people or systems."
+  },
+  {
+    "id": 216,
+    "term": "System owner",
+    "definition": "The individual responsible for the overall operation and security of a system."
+  }
+]
