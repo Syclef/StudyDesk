@@ -13,6 +13,33 @@ const ACCENT = "#3b82f6";
 const SUCCESS = "#4ade80";
 const DANGER = "#f87171";
 
+function renderQuestionText(text: string, color: string): React.ReactNode {
+  // Check if text contains newlines (scenario/bullet format)
+  if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  
+  return (
+    <div>
+      {lines.map((line, i) => {
+        if (line.startsWith('- ') || line.startsWith('• ')) {
+          return (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, color }}>
+              <span style={{ flexShrink: 0 }}>•</span>
+              <span style={{ lineHeight: 1.5 }}>{line.replace(/^[-•]\s*/, '')}</span>
+            </div>
+          );
+        }
+        return (
+          <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 interface Choice {
   id: string;
   label: string;
@@ -88,9 +115,7 @@ const SimulatorPage = () => {
     if (!session || !currentQuestion || !selectedOption) return;
     const choice = currentQuestion.choices.find((c) => c.label === selectedOption);
     if (!choice) return;
-
     if (choice.isCorrect) setCorrectCount((n) => n + 1);
-
     try {
       await fetch(`${API_BASE}/attempts/${session.attemptId}/answers/${currentQuestion.id}`, {
         method: "PATCH",
@@ -177,10 +202,11 @@ const SimulatorPage = () => {
           {currentQuestion.domain} · {currentQuestion.category}
         </div>
 
-        <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.6, marginBottom: 20, color: TEXT }}>
-          {currentQuestion.text}
+        <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.6, marginBottom: 20 }}>
+          {renderQuestionText(currentQuestion.text, TEXT)}
         </div>
 
+        {/* Choices */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {currentQuestion.choices.map((choice) => {
             const isSelected = selectedOption === choice.label;

@@ -16,15 +16,20 @@ export function getStudyProgress(): Record<string, StudyCategoryProgress> {
 
 export function recordStudyResult(category: string, correct: number, total: number) {
   const all = getStudyProgress();
-  const prev = all[category] ?? { attempted: 0, correct: 0, total };
   all[category] = {
-    attempted: prev.attempted + total,
-    correct: prev.correct + correct,
+    attempted: total,
+    correct: correct,
     total,
   };
   localStorage.setItem(KEY, JSON.stringify(all));
 }
 
-export function clearStudyProgress() {
+export function clearCategoryProgress(category: string) {
+  const all = getStudyProgress();
+  delete all[category];
+  localStorage.setItem(KEY, JSON.stringify(all));
+}
+
+export function clearAllStudyProgress() {
   localStorage.removeItem(KEY);
 }

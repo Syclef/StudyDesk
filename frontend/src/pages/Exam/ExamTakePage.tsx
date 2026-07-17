@@ -24,6 +24,33 @@ const SUCCESS = "#4ade80";
 const DANGER = "#f87171";
 const WARNING = "#fbbf24";
 
+function renderQuestionText(text: string, color: string): React.ReactNode {
+  // Check if text contains newlines (scenario/bullet format)
+  if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  
+  return (
+    <div>
+      {lines.map((line, i) => {
+        if (line.startsWith('- ') || line.startsWith('• ')) {
+          return (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, color }}>
+              <span style={{ flexShrink: 0 }}>•</span>
+              <span style={{ lineHeight: 1.5 }}>{line.replace(/^[-•]\s*/, '')}</span>
+            </div>
+          );
+        }
+        return (
+          <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ExamTakePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -238,8 +265,8 @@ export default function ExamTakePage() {
           {flagged[current.id] && <span style={{ marginLeft: 8, color: WARNING, fontWeight: 700 }}>⚑ Flagged</span>}
         </div>
 
-        <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.6, marginBottom: 20, color: TEXT }}>
-          {current.text}
+        <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.6, marginBottom: 20 }}>
+          {renderQuestionText(current.text, TEXT)}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

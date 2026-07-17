@@ -41,7 +41,7 @@ app.post("/scores/:game", async (req, reply) => {
   const { game } = req.params as { game: string };
   const { score } = req.body as { score: number };
   if (typeof score !== "number") return reply.badRequest("score must be a number");
-  return prisma.gameScore.create({ data: { game, score } });
+  return prisma.gameScore.create({ data: { id: `${game}-${Date.now()}`, game, score } });
 });
 
 // ─── Attempts ─────────────────────────────────────────────────────────────────
@@ -121,7 +121,13 @@ app.post("/attempts", async (req, reply) => {
       domain: q.domain,
       category: q.category,
       text: q.text,
-      choices: q.choices.map((c) => ({ label: c.label, text: c.text })),
+      choices: q.choices.map((c) => ({ 
+        id: c.id,
+        label: c.label, 
+        text: c.text,
+        isCorrect: mode === "STUDY" ? c.isCorrect : false,
+        justification: mode === "STUDY" ? c.justification : null,
+      })),
     })),
   };
 });

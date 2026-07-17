@@ -48,6 +48,33 @@ const ACCENT = "#3b82f6";
 const SUCCESS = "#4ade80";
 const DANGER = "#f87171";
 
+function renderQuestionText(text: string, color: string): React.ReactNode {
+  // Check if text contains newlines (scenario/bullet format)
+  if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  
+  return (
+    <div>
+      {lines.map((line, i) => {
+        if (line.startsWith('- ') || line.startsWith('• ')) {
+          return (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, color }}>
+              <span style={{ flexShrink: 0 }}>•</span>
+              <span style={{ lineHeight: 1.5 }}>{line.replace(/^[-•]\s*/, '')}</span>
+            </div>
+          );
+        }
+        return (
+          <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -250,7 +277,7 @@ export default function PracticeSessionPage() {
             return (
               <div key={q.id} style={{ background: CARD, borderRadius: 8, padding: "14px 16px", borderLeft: `4px solid ${borderColor}` }}>
                 <div style={{ fontSize: 11, color: MUTED, marginBottom: 4 }}>{q.domain} · {q.category}</div>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>{i + 1}. {q.text}</div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>{i + 1}. {renderQuestionText(q.text, TEXT)}</div>
                 {skipped ? (
                   <div style={{ color: MUTED, fontSize: 13 }}>Skipped</div>
                 ) : (
@@ -289,8 +316,8 @@ export default function PracticeSessionPage() {
 
       <div style={{ background: CARD, borderRadius: 12, padding: 24, marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}>{currentQuestion.domain} · {currentQuestion.category}</div>
-        <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.6, marginBottom: 20, color: TEXT }}>
-          {currentQuestion.text}
+        <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.6, marginBottom: 20 }}>
+          {renderQuestionText(currentQuestion.text, TEXT)}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -314,11 +341,11 @@ export default function PracticeSessionPage() {
             const hasJustification = isChecked && choice.justification;
 
             const choiceTag = isChecked && isSelected && isCorrectChoice
-              ? <span style={{ color: SUCCESS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}> Your answer is correct</span>
+              ? <span style={{ color: SUCCESS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>✓ Your answer is correct</span>
               : isChecked && isSelected && !isCorrectChoice
-              ? <span style={{ color: DANGER, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}> Your answer is incorrect</span>
+              ? <span style={{ color: DANGER, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>✗ Your answer is incorrect</span>
               : isChecked && !isSelected && isCorrectChoice
-              ? <span style={{ color: SUCCESS, fontWeight: 700 }}>Correct answer</span>
+              ? <span style={{ color: SUCCESS, fontWeight: 700 }}>✓</span>
               : null;
 
             return (
