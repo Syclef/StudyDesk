@@ -5,110 +5,163 @@ const API_BASE = "http://127.0.0.1:4000";
 
 interface AttemptSummary {
   id: string;
+  mode: string;
   score: number | null;
   total: number | null;
   percent: number | null;
+  startedAt: string;
   submittedAt: string | null;
 }
 
 export default function ExamLandingPage() {
   const navigate = useNavigate();
-  const [lastAttempt, setLastAttempt] = useState<AttemptSummary | null>(null);
+  const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/attempts?mode=EXAM`)
+  const fetchAttempts = () => {
+    fetch(`${API_BASE}/attempts`)
       .then((r) => r.json())
       .then((data: AttemptSummary[]) => {
-        if (data.length > 0) setLastAttempt(data[0]);
+        setAttempts(data.filter((a) => a.mode === "EXAM" && a.total && a.total >= 100));
+        setLoading(false);
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchAttempts(); }, []);
 
   const startExamSet = (slot: number) => {
     navigate("/exam/intro", {
-      state: {
-        mode: "full",
-        domains: [1, 2, 3, 4, 5],
-        count: 150,
-        minutes: 240,
-        mock: slot,
-      },
+      state: { mode: "full", domains: [1, 2, 3, 4, 5], count: 150, minutes: 240, mock: slot },
     });
   };
 
+  const scoreColor = (pct: number | null) => {
+    if (pct === null) return "var(--muted)";
+    if (pct >= 75) return "var(--success, #32d74b)";
+    if (pct >= 60) return "var(--warning, #ff9f0a)";
+    return "var(--danger, #ff453a)";
+  };
+
+  const sortedOldFirst = [...attempts].reverse();
+  const totalAttempts = attempts.length;
+  const bestScore = attempts.length > 0 ? Math.max(...attempts.map(a => a.percent ?? 0)) : null;
+  const lastScore = attempts.length > 0 ? attempts[0].percent : null;
+  const passes = attempts.filter(a => (a.percent ?? 0) >= 75).length;
+
+  const attemptsBySlot: Record<number, AttemptSummary | null> = {};
+  for (let slot = 1; slot <= 5; slot++) {
+    attemptsBySlot[slot] = sortedOldFirst[slot - 1] ?? null;
+  }
+
   return (
-    <div style={{ padding: 32, maxWidth: 720, margin: "0 auto", color: "var(--text)" }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 6px 0" }}>Exam</h1>
+    <div style={{ padding: 32, maxWidth: 860, margin: "0 auto", color: "var(--text)" }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 4px 0", letterSpacing: "-0.3px" }}>Exam</h1>
       <p style={{ color: "var(--muted)", fontSize: 13, margin: "0 0 24px 0" }}>
         Simulate the real CISA exam — 150 questions · 4 hours · domain-weighted · timed
       </p>
 
-      {lastAttempt && (
-        <div style={{
-          background: "var(--card-bg)",
-          border: "1px solid var(--card-border)",
-          borderRadius: 12,
-          padding: "16px 20px",
-          marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
-            Last Attempt
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text)" }}>
-            {lastAttempt.percent ?? 0}%
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            {lastAttempt.score} / {lastAttempt.total} correct ·{" "}
-            {lastAttempt.submittedAt ? new Date(lastAttempt.submittedAt).toLocaleDateString() : ""}
+      {/* Metrics */}
+      {!loading && totalAttempts > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 20 }}>
+          {[
+            { label: "Attempts", value: totalAttempts, color: "var(--text)" },
+            { label: "Last Score", value: lastScore !== null ? `${lastScore}%` : "—", color: scoreColor(lastScore) },
+            { label: "Best Score", value: bestScore !== null ? `${bestScore}%` : "—", color: scoreColor(bestScore) },
+            { label: "Passed", value: `${passes}/${totalAttempts}`, color: passes > 0 ? "var(--success, #32d74b)" : "var(--danger, #ff453a)" },
+          ].map((m) => (
+            <div key={m.label} style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: m.color }}>{m.value}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent attempts */}
+      {!loading && attempts.length > 0 && (
+        <div style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Recent Attempts</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {attempts.slice(0, 5).map((a, i) => {
+              const pct = a.percent ?? 0;
+              const label = pct >= 75 ? "PASS" : pct >= 60 ? "BORDERLINE" : "FAIL";
+              const color = scoreColor(a.percent);
+              return (
+                <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                  <span style={{ color: "var(--text)", fontWeight: 600 }}>
+                    Exam Set {sortedOldFirst.indexOf(a) + 1} · Attempt #{attempts.length - i}
+                  </span>
+                  <span style={{ color: "var(--muted)", fontSize: 12 }}>
+                    {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : "—"}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `${color}20`, color }}>{label}</span>
+                    <span style={{ fontWeight: 700, color }}>{pct}%</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>
-        <button
-          onClick={() => navigate("/exam/setup")}
-          style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-        >
-          Custom Quiz
-        </button>
-        <button
-          onClick={() => navigate("/exam/history")}
-          style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-        >
-          View History
-        </button>
+      {/* Exam Sets header + reset */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Exam Sets</h2>
+        {attempts.length > 0 && (
+          <button
+            onClick={() => {
+              if (confirm("Reset all exam progress? This cannot be undone.")) {
+                fetch(`${API_BASE}/attempts/exam`, { method: "DELETE" })
+                  .then(() => setAttempts([]));
+              }
+            }}
+            style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px", color: "var(--muted)", cursor: "pointer", fontSize: 12 }}
+          >↺ Reset</button>
+        )}
       </div>
 
-      <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text)" }}>
-        Exam Sets
-      </h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            onClick={() => startExamSet(n)}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "var(--card-bg)",
-              border: "1px solid var(--card-border)",
-              borderRadius: 10,
-              padding: "14px 18px",
-              cursor: "pointer",
-              color: "var(--text)",
-              textAlign: "left",
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Exam Set {n}</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                150 questions · 4 hours · CISA weighted · timed
+        {[1, 2, 3, 4, 5].map((n) => {
+          const slotAttempt = attemptsBySlot[n];
+          const pct = slotAttempt?.percent ?? null;
+          const passed = pct !== null && pct >= 75;
+          const attempted = slotAttempt !== null;
+          const color = scoreColor(pct);
+
+          return (
+            <div key={n} style={{
+              display: "flex", alignItems: "center",
+              background: "var(--card-bg)", border: "1px solid var(--card-border)",
+              borderRadius: 10, padding: "14px 18px", gap: 12,
+            }}>
+              {/* Status dot */}
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                background: passed ? "var(--success, #32d74b)" : attempted ? "var(--warning, #ff9f0a)" : "var(--border)",
+              }} />
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)" }}>Exam Set {n}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                  {attempted
+                    ? `Last: ${pct}% · ${slotAttempt?.submittedAt ? new Date(slotAttempt.submittedAt).toLocaleDateString() : ""}`
+                    : "150 questions · 4 hours · CISA weighted · timed"}
+                </div>
               </div>
+
+              <button
+                onClick={() => startExamSet(n)}
+                style={{
+                  background: "var(--accent)", color: "#fff", border: "none",
+                  borderRadius: 8, padding: "7px 18px",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >{attempted ? "Retake" : "Start"}</button>
             </div>
-            <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
-          </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

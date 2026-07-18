@@ -1,65 +1,25 @@
-import type { Question } from "../api/questions";
+import type { ExamAttempt } from "../pages/Exam/examTypes";
 
-export interface ExamAttempt {
-  id: string;
-  date: string;
-  total: number;
-  correct: number;
-  incorrect: number;
-  unanswered: number;
-  scorePercent: number;
-  answers: Record<number, string>;
+const DRAFT_KEY = "asd_exam_attempt_draft";
+const LAST_ATTEMPT_ID_KEY = "asd_last_exam_attempt_id";
+
+export function saveAttemptDraft(attempt: ExamAttempt) {
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(attempt));
 }
 
-/**
- * Save an exam attempt to localStorage
- */
-export function saveExamAttempt(
-  questions: Question[],
-  answers: Record<number, string>
-) {
-  const correct = questions.filter(
-    (q) => answers[q.id] === q.correct_answer
-  ).length;
-
-  const unanswered = questions.filter(
-    (q) => !answers[q.id]
-  ).length;
-
-  const incorrect =
-    questions.length - correct - unanswered;
-
-  const attempt: ExamAttempt = {
-    id: crypto.randomUUID(),
-    date: new Date().toISOString(),
-    total: questions.length,
-    correct,
-    incorrect,
-    unanswered,
-    scorePercent: Math.round(
-      (correct / questions.length) * 100
-    ),
-    answers,
-  };
-
-  const existing =
-    JSON.parse(
-      localStorage.getItem("examAttempts") || "[]"
-    ) as ExamAttempt[];
-
-  existing.unshift(attempt);
-
-  localStorage.setItem(
-    "examAttempts",
-    JSON.stringify(existing)
-  );
+export function loadAttemptDraft(): ExamAttempt | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Load all saved exam attempts
- */
-export function loadExamAttempts(): ExamAttempt[] {
-  return JSON.parse(
-    localStorage.getItem("examAttempts") || "[]"
-  );
+export function saveLastAttemptId(id: string) {
+  localStorage.setItem(LAST_ATTEMPT_ID_KEY, id);
+}
+
+export function loadLastAttemptId(): string | null {
+  return localStorage.getItem(LAST_ATTEMPT_ID_KEY);
 }

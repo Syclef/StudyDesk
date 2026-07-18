@@ -68,12 +68,13 @@ app.get("/attempts", async (req) => {
 });
 
 app.post("/attempts", async (req, reply) => {
-  const { mode, domain, category, questionCount, durationSec } = req.body as {
+  const { mode, domain, category, questionCount, durationSec, questionIds } = req.body as {
     mode: "PRACTICE" | "EXAM" | "STUDY";
     domain?: string;
     category?: string;
     questionCount?: number;
     durationSec: number;
+    questionIds?: string[];
   };
 
   const ANON_USER_ID = "anon";
@@ -83,6 +84,17 @@ app.post("/attempts", async (req, reply) => {
     update: {},
   });
 
+  let selected: any[];
+  
+  if (questionIds && questionIds.length > 0) {
+  selected = await prisma.question.findMany({
+    where: { id: { in: questionIds }, active: true },
+    include: { choices: { orderBy: { label: "asc" } } },
+  });
+  
+  const idOrder = new Map(questionIds.map((id, i) => [id, i]));
+  selected.sort((a: any, b: any) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+} else {
   const questions = await prisma.question.findMany({
     where: {
       active: true,
@@ -91,11 +103,12 @@ app.post("/attempts", async (req, reply) => {
     },
     include: { choices: { orderBy: { label: "asc" } } },
   });
-
   if (questions.length === 0) return reply.badRequest("No questions found");
-
   const shuffled = questions.sort(() => Math.random() - 0.5);
-  const selected = questionCount ? shuffled.slice(0, questionCount) : shuffled;
+  selected = questionCount ? shuffled.slice(0, questionCount) : shuffled;
+}
+
+if (selected.length === 0) return reply.badRequest("No questions found");
 
   const attempt = await prisma.attempt.create({
     data: {
@@ -121,7 +134,7 @@ app.post("/attempts", async (req, reply) => {
       domain: q.domain,
       category: q.category,
       text: q.text,
-      choices: q.choices.map((c) => ({ 
+      choices: q.choices.map((c: any) => ({ 
         id: c.id,
         label: c.label, 
         text: c.text,
@@ -134,8 +147,9 @@ app.post("/attempts", async (req, reply) => {
 
 app.patch("/attempts/:id/answers/:questionId", async (req, reply) => {
   const { id, questionId } = req.params as { id: string; questionId: string };
-  const { choiceLabel, flagged, timeSpentMs } = req.body as {
+  const { choiceLabel, choiceId: directChoiceId, flagged, timeSpentMs } = req.body as {
     choiceLabel?: string;
+    choiceId?: string;
     flagged?: boolean;
     timeSpentMs?: number;
   };
@@ -144,8 +158,8 @@ app.patch("/attempts/:id/answers/:questionId", async (req, reply) => {
   if (!attempt) return reply.notFound("Attempt not found");
   if (attempt.submittedAt) return reply.badRequest("Already submitted");
 
-  let choiceId: string | undefined;
-  if (choiceLabel) {
+  let choiceId: string | undefined = directChoiceId;
+  if (!choiceId && choiceLabel) {
     const choice = await prisma.choice.findFirst({
       where: { questionId, label: choiceLabel },
     });
@@ -239,8 +253,24 @@ app.get("/attempts/:id/results", async (req, reply) => {
   };
 });
 
+// ─── Reset ─────────────────────────────────────────────────────────────────
+app.delete("/attempts/exam", async (req, reply) => {
+  await prisma.attemptAnswer.deleteMany({
+    where: { attempt: { mode: "EXAM" } },
+  });
+  await prisma.attemptQuestion.deleteMany({
+    where: { attempt: { mode: "EXAM" } },
+  });
+  await prisma.attempt.deleteMany({
+    where: { mode: "EXAM" },
+  });
+  return { ok: true };
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen({ port: env.PORT, host: "0.0.0.0" }).then(() => {
   app.log.info(`API running on http://localhost:${env.PORT}`);
 });
+
+

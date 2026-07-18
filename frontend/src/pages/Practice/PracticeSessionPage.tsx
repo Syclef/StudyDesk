@@ -48,29 +48,32 @@ const ACCENT = "#3b82f6";
 const SUCCESS = "#4ade80";
 const DANGER = "#f87171";
 
+// Renders question text with bullet formatting for scenario-type questions
 function renderQuestionText(text: string, color: string): React.ReactNode {
-  // Check if text contains newlines (scenario/bullet format)
-  if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
+  // Split on " - " followed by capital letter (scenario bullet pattern)
+  const parts = text.split(/ - (?=[A-Z])/);
+  if (parts.length <= 1) return <span style={{ color }}>{text}</span>;
 
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  
+  // The last part may contain "final bullet. Question stem"
+  // Split last part at ". Capital" to separate bullet from stem
+  const lastPart = parts[parts.length - 1];
+  const stemMatch = lastPart.match(/^(.*?)\. ([A-Z].+[?:])$/s);
+
+  const bullets = stemMatch
+    ? [...parts.slice(1, -1), stemMatch[1]]
+    : parts.slice(1);
+  const stem = stemMatch ? stemMatch[2] : null;
+
   return (
     <div>
-      {lines.map((line, i) => {
-        if (line.startsWith('- ') || line.startsWith('• ')) {
-          return (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, color }}>
-              <span style={{ flexShrink: 0 }}>•</span>
-              <span style={{ lineHeight: 1.5 }}>{line.replace(/^[-•]\s*/, '')}</span>
-            </div>
-          );
-        }
-        return (
-          <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>
-            {line}
-          </p>
-        );
-      })}
+      <p style={{ margin: "0 0 10px 0", color }}>{parts[0]}</p>
+      <ul style={{ margin: "0 0 10px 0", paddingLeft: 20, color }}>
+        {bullets.map((p, i) => (
+          <li key={i} style={{ marginBottom: 6, lineHeight: 1.5 }}>{p}</li>
+        ))}
+      </ul>
+      {stem && <p style={{ margin: 0, color }}>{stem}</p>}
+      {!stem && !stemMatch && <p style={{ margin: 0, color }}>{lastPart}</p>}
     </div>
   );
 }

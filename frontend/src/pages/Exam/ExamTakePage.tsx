@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ExamAttempt, ExamQuestion, ExamSession, ExamUserAnswer } from "./examTypes";
 import { buildExamSession, calcRemainingSeconds } from "./examUtils";
-import { saveAttemptDraft } from "./examStorage";
+import { saveAttemptDraft, saveLastAttemptId } from "../../utils/examStorage";
+
+const API_BASE = "http://127.0.0.1:4000";
 
 type LocationState = {
   mode?: "full" | "domain" | "custom";
@@ -12,7 +14,7 @@ type LocationState = {
   mock?: number;
 };
 
-type Phase = "loading" | "taking" | "review";
+type Phase = "loading" | "taking" | "review" | "submitting";
 
 const BG = "#0f1b2d";
 const CARD = "#1a2540";
@@ -20,16 +22,12 @@ const TEXT = "#e5eaf1";
 const MUTED = "#94a3b8";
 const BORDER = "rgba(255,255,255,0.10)";
 const ACCENT = "#3b82f6";
-const SUCCESS = "#4ade80";
 const DANGER = "#f87171";
 const WARNING = "#fbbf24";
 
 function renderQuestionText(text: string, color: string): React.ReactNode {
-  // Check if text contains newlines (scenario/bullet format)
   if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
-
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  
   return (
     <div>
       {lines.map((line, i) => {
@@ -41,11 +39,7 @@ function renderQuestionText(text: string, color: string): React.ReactNode {
             </div>
           );
         }
-        return (
-          <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>
-            {line}
-          </p>
-        );
+        return <p key={i} style={{ margin: i === lines.length - 1 ? 0 : '0 0 8px 0', color, lineHeight: 1.6 }}>{line}</p>;
       })}
     </div>
   );
@@ -106,8 +100,11 @@ export default function ExamTakePage() {
     setIdx(i);
   };
 
-  const finalSubmit = (auto = false) => {
+  const finalSubmit = async (auto = false) => {
     if (!session) return;
+    setPhase("submitting");
+
+    // 1. Save draft for results/review page
     const attempt: ExamAttempt = {
       id: session.id,
       createdAt: session.createdAt,
@@ -121,6 +118,21 @@ export default function ExamTakePage() {
       autoSubmitted: auto,
     };
     saveAttemptDraft(attempt);
+    saveLastAttemptId(session.id);
+
+    // 2. Submit each answer to the API
+    const patchPromises = Object.values(answers).map((ans) =>
+      fetch(`${API_BASE}/attempts/${session.id}/answers/${ans.questionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ choiceId: ans.choiceId }),
+      }).catch(() => {}) // don't fail on individual patch errors
+    );
+    await Promise.all(patchPromises);
+
+    // 3. Submit the attempt to DB
+    await fetch(`${API_BASE}/attempts/${session.id}/submit`, { method: "POST" }).catch(() => {});
+
     navigate("/exam/results");
   };
 
@@ -135,18 +147,22 @@ export default function ExamTakePage() {
   const timerColor = remaining < 300 ? DANGER : MUTED;
 
   const pageStyle: React.CSSProperties = {
-    minHeight: "100vh",
-    background: BG,
-    color: TEXT,
-    padding: "24px 32px",
-    maxWidth: 860,
-    margin: "0 auto",
+    minHeight: "100vh", background: BG, color: TEXT,
+    padding: "24px 32px", maxWidth: 860, margin: "0 auto",
   };
 
   if (phase === "loading" || !session || !current) {
     return (
       <div style={pageStyle}>
         <p style={{ color: MUTED }}>Loading questions…</p>
+      </div>
+    );
+  }
+
+  if (phase === "submitting") {
+    return (
+      <div style={pageStyle}>
+        <p style={{ color: MUTED }}>Submitting your exam…</p>
       </div>
     );
   }
@@ -166,11 +182,10 @@ export default function ExamTakePage() {
           <span style={{ fontSize: 13, color: timerColor, fontWeight: 700 }}>{fmt(remaining)}</span>
         </div>
 
-        {/* Summary cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
           {[
-            { label: "Answered", value: answeredCount, color: SUCCESS },
-            { label: "Unanswered", value: unansweredCount, color: unansweredCount > 0 ? DANGER : SUCCESS },
+            { label: "Answered", value: answeredCount, color: "#4ade80" },
+            { label: "Unanswered", value: unansweredCount, color: unansweredCount > 0 ? DANGER : "#4ade80" },
             { label: "Flagged", value: flaggedCount, color: WARNING },
           ].map((s) => (
             <div key={s.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
@@ -180,7 +195,6 @@ export default function ExamTakePage() {
           ))}
         </div>
 
-        {/* Question grid */}
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: TEXT }}>Question Overview</div>
           <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: MUTED }}>
@@ -197,11 +211,8 @@ export default function ExamTakePage() {
               if (isFlagged) { bg = "rgba(251,191,36,0.25)"; border = "rgba(251,191,36,0.50)"; }
               else if (answered) { bg = "rgba(74,222,128,0.20)"; border = "rgba(74,222,128,0.40)"; }
               return (
-                <button
-                  key={q.id}
-                  onClick={() => { setPhase("taking"); setIdx(i); }}
-                  style={{ width: 36, height: 36, borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${border}`, background: bg, color: TEXT }}
-                >
+                <button key={q.id} onClick={() => { setPhase("taking"); setIdx(i); }}
+                  style={{ width: 36, height: 36, borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${border}`, background: bg, color: TEXT }}>
                   {i + 1}
                 </button>
               );
@@ -216,16 +227,12 @@ export default function ExamTakePage() {
         )}
 
         <div style={{ display: "flex", gap: 12 }}>
-          <button
-            onClick={() => finalSubmit(false)}
-            style={{ background: DANGER, color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-          >
+          <button onClick={() => finalSubmit(false)}
+            style={{ background: DANGER, color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             Confirm Submit
           </button>
-          <button
-            onClick={() => setPhase("taking")}
-            style={{ background: "none", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-          >
+          <button onClick={() => setPhase("taking")}
+            style={{ background: "none", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             Continue Exam
           </button>
         </div>
@@ -236,21 +243,15 @@ export default function ExamTakePage() {
   // ── Taking ─────────────────────────────────────────────────────────────────
   return (
     <div style={pageStyle}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-          {mock ? `Exam Set ${mock}` : "Custom Quiz"}
-        </h1>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{mock ? `Exam Set ${mock}` : "Custom Quiz"}</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: timerColor }}>{fmt(remaining)}</span>
-          <button
-            onClick={() => { if (confirm("Quit? Progress will be lost.")) navigate("/exam"); }}
-            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 14px", color: TEXT, cursor: "pointer", fontSize: 13 }}
-          >Exit</button>
+          <button onClick={() => { if (confirm("Quit? Progress will be lost.")) navigate("/exam"); }}
+            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 14px", color: TEXT, cursor: "pointer", fontSize: 13 }}>Exit</button>
         </div>
       </div>
 
-      {/* Progress */}
       <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>
         Question {idx + 1} of {totalQ} · Answered: {answeredCount}
       </div>
@@ -258,7 +259,6 @@ export default function ExamTakePage() {
         <div style={{ height: "100%", width: `${((idx + 1) / totalQ) * 100}%`, background: ACCENT, borderRadius: 999, transition: "width 0.2s" }} />
       </div>
 
-      {/* Question card */}
       <div style={{ background: CARD, borderRadius: 12, padding: 24, marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}>
           {current.domain ? `D${current.domain}` : ""}{current.ks ? ` · ${current.ks}` : ""}
@@ -273,17 +273,14 @@ export default function ExamTakePage() {
           {current.choices.map((c) => {
             const isSelected = answers[current.id]?.choiceId === c.id;
             return (
-              <div
-                key={c.id}
-                onClick={() => handlePick(c.id)}
+              <div key={c.id} onClick={() => handlePick(c.id)}
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "14px 16px", borderRadius: 8,
                   border: `1px solid ${isSelected ? ACCENT : BORDER}`,
                   background: isSelected ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.04)",
                   color: TEXT, cursor: "pointer", transition: "all 0.15s",
-                }}
-              >
+                }}>
                 <span style={{ fontWeight: 700, width: 20, flexShrink: 0 }}>{c.label}</span>
                 <span style={{ fontSize: 14, lineHeight: 1.5 }}>{c.text}</span>
               </div>
@@ -292,39 +289,40 @@ export default function ExamTakePage() {
         </div>
       </div>
 
-      {/* Footer buttons */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button
-          onClick={() => goTo(idx - 1)}
-          disabled={idx === 0}
-          style={{
-            background: "none", border: `1px solid ${BORDER}`, borderRadius: 8,
-            padding: "10px 20px", fontSize: 13, color: idx === 0 ? "rgba(255,255,255,0.25)" : MUTED,
-            cursor: idx === 0 ? "not-allowed" : "pointer",
-          }}
-        >‹ Prev</button>
+        <button onClick={() => goTo(idx - 1)} disabled={idx === 0}
+          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 20px", fontSize: 13, color: idx === 0 ? "rgba(255,255,255,0.25)" : MUTED, cursor: idx === 0 ? "not-allowed" : "pointer" }}>
+          ‹ Prev
+        </button>
 
-        <button
-          onClick={() => toggleFlag(current.id)}
+        <button onClick={() => toggleFlag(current.id)}
           style={{
             background: flagged[current.id] ? "rgba(251,191,36,0.15)" : "none",
             border: `1px solid ${flagged[current.id] ? "rgba(251,191,36,0.40)" : BORDER}`,
             borderRadius: 8, padding: "10px 20px", fontSize: 13,
             color: flagged[current.id] ? WARNING : MUTED, cursor: "pointer",
-          }}
-        >⚑ {flagged[current.id] ? "Unflag" : "Flag"}</button>
+          }}>
+          ⚑ {flagged[current.id] ? "Unflag" : "Flag"}
+        </button>
 
         {isLast ? (
-          <button
-            onClick={() => setPhase("review")}
-            style={{ background: DANGER, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}
-          >Review Exam ›</button>
+          <button onClick={() => setPhase("review")}
+            style={{ background: DANGER, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+            Review Exam ›
+          </button>
         ) : (
-          <button
-            onClick={() => goTo(idx + 1)}
-            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}
-          >Next ›</button>
+          <button onClick={() => goTo(idx + 1)}
+            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+            Next ›
+          </button>
         )}
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 16 }}>
+        <button onClick={() => setPhase("review")}
+          style={{ background: "none", border: "none", color: MUTED, fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+          Review & Submit Exam
+        </button>
       </div>
     </div>
   );

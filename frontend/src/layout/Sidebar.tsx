@@ -1,100 +1,83 @@
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
-  BookOpen,
-  Target,
-  GraduationCap,
-  Layers,
-  Gamepad2,
-  Sun,
-  Moon,
+  LayoutDashboard, BookOpen, Target, GraduationCap,
+  Layers, Sun, Moon,
 } from "lucide-react";
 import { useTheme } from "../utils/theme";
 
 export default function Sidebar() {
   const { mode, toggle } = useTheme();
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
-      isActive
-        ? "bg-blue-600/90 text-white shadow-md shadow-blue-900/30"
-        : "text-slate-300/80 hover:bg-white/5 hover:text-white"
-    }`;
-
-  const iconClass = "w-5 h-5";
-
   return (
-    <aside className="sidebar-container sidebar-float w-64 p-6 flex flex-col rounded-[28px] self-stretch">
-      {/* App Logo/Title */}
-      <div className="mb-10 px-2">
-        <h1 className="text-xl font-bold text-white tracking-tight">
-          AuditStudyDesk<span className="text-blue-500">.</span>
-        </h1>
+    <aside style={{
+      width: 220, minWidth: 220, flexShrink: 0,
+      height: "100vh", position: "sticky", top: 0,
+      background: "var(--sidebar-bg, #ffffff)",
+      borderRight: "1px solid var(--sidebar-border, rgba(0,0,0,0.08))",
+      display: "flex", flexDirection: "column",
+      padding: "16px 10px", overflowY: "auto",
+    }}>
+      <div style={{ padding: "4px 8px 20px", fontSize: 15, fontWeight: 700, color: "var(--text, #1d1d1f)", letterSpacing: "-0.3px" }}>
+        AuditStudyDesk<span style={{ color: "var(--accent, #0071e3)" }}>.</span>
       </div>
 
-      <nav className="space-y-8">
-        {/* MAIN SECTION */}
-        <div>
-          <p className="text-[10px] font-bold text-slate-400/60 tracking-[0.22em] mb-4 px-2">
-            MAIN
-          </p>
-          <div className="space-y-1">
-            <NavLink to="/" className={linkClass}>
-              <LayoutDashboard className={iconClass} />
-              <span className="font-semibold">Dashboard</span>
-            </NavLink>
+      <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+        <p style={{ fontSize: 10, fontWeight: 600, color: "var(--muted, #6e6e73)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "0 8px", margin: "0 0 4px 0" }}>Main</p>
+        {[
+          { to: "/", end: true, icon: <LayoutDashboard size={16} />, label: "Dashboard" },
+          { to: "/study", icon: <BookOpen size={16} />, label: "Study" },
+          { to: "/practice", icon: <Target size={16} />, label: "Practice" },
+          { to: "/exam", icon: <GraduationCap size={16} />, label: "Exam" },
+        ].map(({ to, end, icon, label }) => (
+          <NavLink key={to} to={to} end={end}
+            style={({ isActive }) => ({
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "7px 8px", borderRadius: 8,
+              fontSize: 13, fontWeight: isActive ? 600 : 500,
+              color: isActive ? "var(--accent, #0071e3)" : "var(--text-2, #3d3d3f)",
+              background: isActive ? "var(--accent-light, rgba(0,113,227,0.10))" : "transparent",
+              textDecoration: "none",
+            })}
+          >
+            {icon}<span>{label}</span>
+          </NavLink>
+        ))}
 
-            <NavLink to="/study" className={linkClass}>
-              <BookOpen className={iconClass} />
-              <span className="font-semibold">Study</span>
-            </NavLink>
-
-            <NavLink to="/practice" className={linkClass}>
-              <Target className={iconClass} />
-              <span className="font-semibold">Practice</span>
-            </NavLink>
-
-            <NavLink to="/exam" className={linkClass}>
-              <GraduationCap className={iconClass} />
-              <span className="font-semibold">Exam</span>
-            </NavLink>
-          </div>
-        </div>
-
-        {/* RESOURCES SECTION */}
-        <div>
-          <p className="text-[10px] font-bold text-slate-400/60 tracking-[0.22em] mb-4 px-2">
-            RESOURCES
-          </p>
-          <div className="space-y-1">
-            <NavLink to="/flashcards" className={linkClass}>
-              <Layers className={iconClass} />
-              <span className="font-semibold">Flashcards</span>
-            </NavLink>
-
-            <NavLink to="/games" className={linkClass}>
-              <Gamepad2 className={iconClass} />
-              <span className="font-semibold">Game Center</span>
-            </NavLink>
-          </div>
-        </div>
+        <p style={{ fontSize: 10, fontWeight: 600, color: "var(--muted, #6e6e73)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "0 8px", margin: "16px 0 4px 0" }}>Resources</p>
+        <NavLink to="/flashcards"
+          style={({ isActive }) => ({
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "7px 8px", borderRadius: 8,
+            fontSize: 13, fontWeight: isActive ? 600 : 500,
+            color: isActive ? "var(--accent, #0071e3)" : "var(--text-2, #3d3d3f)",
+            background: isActive ? "var(--accent-light, rgba(0,113,227,0.10))" : "transparent",
+            textDecoration: "none",
+          })}
+        >
+          <Layers size={16} /><span>Flashcards</span>
+        </NavLink>
       </nav>
 
-      {/* Bottom Section */}
-      <div className="mt-auto pt-6 border-t border-white/10">
-        <div className="px-2 flex items-center gap-3 text-slate-300/80">
-          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-blue-300">
-            JD
-          </div>
-          <span className="text-sm font-semibold">User Settings</span>
-        <button
-          className="ml-auto theme-toggle-btn"
-          onClick={toggle}
-          title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          aria-label="Toggle theme"
-        >
-          {mode === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+      <div style={{ borderTop: "1px solid var(--border, rgba(0,0,0,0.08))", paddingTop: 12, marginTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px" }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: "var(--accent-light, rgba(0,113,227,0.10))",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 700, color: "var(--accent, #0071e3)", flexShrink: 0,
+          }}>JD</div>
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-2, #3d3d3f)", flex: 1 }}>User Settings</span>
+          <button onClick={toggle}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              background: "transparent", color: "var(--muted, #6e6e73)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            {mode === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
         </div>
       </div>
     </aside>

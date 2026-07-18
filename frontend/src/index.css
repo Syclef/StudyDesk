@@ -1,172 +1,180 @@
 /* =====================================================
-   THEME TOKENS — Light default, Dark opt-in
+   THEME TOKENS — macOS-inspired, clean minimal
    ===================================================== */
 :root {
-  --bg: #f3f5f7;
+  --bg: #f5f5f7;
   --panel: #ffffff;
-  --panel-2: #f7fafc;
-  --text: #0f172a;
-  --muted: #475569;
-  --border: rgba(15, 23, 42, 0.12);
-  --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
+  --panel-2: #f5f5f7;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --text: #1d1d1f;
+  --text-2: #3d3d3f;
+  --muted: #6e6e73;
+  --border: rgba(0,0,0,0.08);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-light: rgba(0,113,227,0.10);
+  --danger: #ff3b30;
+  --success: #34c759;
+  --warning: #ff9500;
   --card-bg: #ffffff;
-  --card-border: rgba(15, 23, 42, 0.08);
+  --card-border: rgba(0,0,0,0.08);
   --input-bg: #ffffff;
-  --input-border: rgba(15, 23, 42, 0.20);
+  --input-border: rgba(0,0,0,0.12);
+  --nav-active-bg: rgba(0,113,227,0.10);
+  --nav-active-text: #0071e3;
+  --nav-hover-bg: rgba(0,0,0,0.04);
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b1220;
-  --panel: #0f1b2d;
-  --panel-2: #0c1626;
-  --text: #e5eaf1;
-  --muted: #94a3b8;
-  --border: rgba(255, 255, 255, 0.12);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --danger: #f87171;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --card-bg: #0f1b2d;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --input-bg: #0c1626;
-  --input-border: rgba(255, 255, 255, 0.15);
+  --bg: #1c1c1e;
+  --panel: #2c2c2e;
+  --panel-2: #1c1c1e;
+  --sidebar-bg: #2c2c2e;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --text: #f5f5f7;
+  --text-2: #ebebf0;
+  --muted: #98989d;
+  --border: rgba(255,255,255,0.08);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --accent: #0a84ff;
+  --accent-hover: #409cff;
+  --accent-light: rgba(10,132,255,0.15);
+  --danger: #ff453a;
+  --success: #32d74b;
+  --warning: #ff9f0a;
+  --card-bg: #2c2c2e;
+  --card-border: rgba(255,255,255,0.06);
+  --input-bg: #3a3a3c;
+  --input-border: rgba(255,255,255,0.10);
+  --nav-active-bg: rgba(10,132,255,0.15);
+  --nav-active-text: #0a84ff;
+  --nav-hover-bg: rgba(255,255,255,0.05);
 }
 
 /* =====================================================
-   BASE STYLES
+   BASE
    ===================================================== */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   margin: 0;
   padding: 0;
-  transition: background 0.2s ease, color 0.2s ease;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* =====================================================
-   GLOBAL PAGE SHELL
+   SCROLLBAR
    ===================================================== */
-.page-content {
-  padding: 32px;
-  max-width: 960px;
-  margin: 0 auto;
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+/* =====================================================
+   LAYOUT SHELL
+   ===================================================== */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* =====================================================
+   SIDEBAR
+   ===================================================== */
+aside,
+.sidebar-container {
+  width: 220px !important;
+  min-width: 220px;
+  background: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--sidebar-border) !important;
+  border-radius: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 20px 12px !important;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+aside::before,
+.sidebar-container::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Logo */
+.sidebar-logo {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.3px;
+  padding: 4px 8px 20px;
 }
 
-/* =====================================================
-   GLOBAL CARD
-   ===================================================== */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow);
+/* Nav section labels */
+.sidebar-container nav p,
+.sidebar-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--muted) !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin: 16px 0 4px !important;
 }
 
-/* =====================================================
-   GLOBAL BUTTONS
-   ===================================================== */
-.btn-primary {
-  background: var(--accent);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-secondary:hover {
-  background: rgba(37, 99, 235, 0.08);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 16px;
+/* Nav links */
+.sidebar-container a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px !important;
+  border-radius: 8px !important;
   font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
 }
 
-.btn-ghost:hover {
-  background: var(--panel-2);
-}
-
-/* =====================================================
-   GLOBAL INPUTS
-   ===================================================== */
-input, select, textarea {
-  background: var(--input-bg);
+.sidebar-container a:hover {
+  background: var(--nav-hover-bg) !important;
   color: var(--text);
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.15s;
 }
 
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--accent);
+.sidebar-container a.active,
+.sidebar-container a[aria-current="page"] {
+  background: var(--nav-active-bg) !important;
+  color: var(--nav-active-text) !important;
+  font-weight: 600;
 }
 
 /* =====================================================
-   GLOBAL SCROLLBAR
+   MAIN CONTENT AREA
    ===================================================== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 999px;
+.main-content-area {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
 }
 
 /* =====================================================
-   FIX STUDY/PRACTICE/GAME PAGES — use theme vars
+   DASHBOARD WRAPPER (Study page etc)
    ===================================================== */
-
-/* Study plan page */
 .dashboard-wrapper {
   background: transparent;
   color: var(--text);
@@ -174,15 +182,16 @@ input:focus, select:focus, textarea:focus {
 
 .main-content {
   padding: 32px;
-  max-width: 960px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .dash-title {
   color: var(--text);
-  font-size: 26px;
-  font-weight: 800;
-  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.3px;
 }
 
 .dash-subtitle {
@@ -191,272 +200,167 @@ input:focus, select:focus, textarea:focus {
   margin: 0 0 24px 0;
 }
 
-.sp-domains {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.dashboard-header {
+  margin-bottom: 24px;
 }
+
+/* =====================================================
+   CARDS
+   ===================================================== */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* =====================================================
+   BUTTONS
+   ===================================================== */
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.btn-primary:hover { opacity: 0.88; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* =====================================================
+   INPUTS
+   ===================================================== */
+input, select, textarea {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* =====================================================
+   STUDY PAGE
+   ===================================================== */
+.domains-container { margin-top: 0; }
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 12px 0;
+}
+
+.sp-domains { display: flex; flex-direction: column; gap: 8px; }
 
 .sp-domain {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .sp-domain-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 18px;
+  padding: 14px 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
   color: var(--text);
-  transition: background 0.15s;
+  user-select: none;
 }
+.sp-domain-header:hover { background: var(--nav-hover-bg); }
 
-.sp-domain-header:hover {
-  background: var(--panel-2);
-}
+.chevron { color: var(--muted); font-size: 12px; }
 
 .sp-domain-tasks {
   border-top: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sp-task {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
-  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-radius: 8px;
+  transition: background 0.1s;
 }
-
-.sp-task:last-child {
-  border-bottom: none;
-}
-
-.task-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.task-info strong {
-  font-size: 13px;
-  color: var(--text);
-}
-
-.task-info span {
-  font-size: 12px;
-  color: var(--muted);
-}
+.sp-task:hover { background: var(--nav-hover-bg); }
 
 .study-btn {
   background: var(--accent);
-  color: #ffffff;
+  color: #fff;
   border: none;
   border-radius: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
 }
+.study-btn:hover { opacity: 0.88; }
 
-.study-btn:hover {
-  background: var(--accent-hover);
-}
-
-.btn-disabled {
-  background: var(--panel-2);
-  color: var(--muted);
+/* =====================================================
+   THEME TOGGLE
+   ===================================================== */
+.theme-toggle-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: not-allowed;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 0 12px 0;
-}
-
-/* Practice categories page */
-.pc-page {
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.theme-toggle-btn:hover { background: var(--nav-hover-bg); }
+
+/* =====================================================
+   GLOBAL PAGE CONTENT
+   ===================================================== */
+.page-content {
   padding: 32px;
-  max-width: 960px;
+  max-width: 900px;
   margin: 0 auto;
-}
-
-.pc-title {
-  color: var(--text);
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0;
-}
-
-.pc-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.table-header, .table-row {
-  display: grid;
-  grid-template-columns: 1fr 100px 100px;
-  padding: 10px 16px;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border);
-}
-
-.table-header {
-  background: var(--panel-2);
-  font-weight: 700;
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.table-row {
   color: var(--text);
 }
-
-.table-row:hover {
-  background: var(--panel-2);
-}
-
-.category-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 13px;
-}
-
-.category-link:hover {
-  text-decoration: underline;
-}
-
-.parent-link {
-  font-weight: 600;
-}
-
-.child-row {
-  padding-left: 32px;
-}
-
-/* Flashcard page */
-.flashcard-page {
-  background: transparent;
-  color: var(--text);
-  padding: 32px;
-}
-
-/* Game center */
-.game-center-page {
-  background: transparent;
-  color: var(--text);
-  padding: 32px;
-}
-
-/* Practice session */
-.ps-page {
-  background: transparent;
-  color: var(--text);
-}
-
-.ps-question-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  padding: 24px;
-  margin-bottom: 20px;
-}
-
-.ps-question-text {
-  color: var(--text);
-}
-
-.ps-choice {
-  border-color: var(--border);
-  background: var(--card-bg);
-  color: var(--text);
-}
-
-.ps-choice:hover {
-  border-color: var(--accent);
-  background: var(--panel-2);
-}
-
-.ps-choice.is-selected {
-  border-color: var(--accent);
-  background: rgba(37, 99, 235, 0.08);
-}
-
-.ps-score-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-}
-
-.ps-score-value {
-  color: var(--text);
-}
-
-.ps-review-item {
-  background: var(--card-bg);
-  border-color: var(--border);
-}
-
-.ps-review-item.is-correct {
-  border-left-color: var(--success);
-}
-
-.ps-review-item.is-incorrect {
-  border-left-color: var(--danger);
-}
-
-.ps-next-btn {
-  background: var(--accent);
-  color: #ffffff;
-}
-
-.ps-next-btn:hover {
-  background: var(--accent-hover);
-}
-
-.ps-next-btn:disabled {
-  background: var(--border);
-  color: var(--muted);
-  cursor: not-allowed;
-}
-
-.ps-back-btn {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.ps-retry-btn {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* Simulator (Study session) */
-.min-h-screen {
-  background: var(--bg) !important;
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;

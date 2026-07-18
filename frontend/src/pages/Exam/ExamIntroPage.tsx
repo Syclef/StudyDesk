@@ -20,7 +20,7 @@ export default function ExamIntroPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 720, margin: "0 auto", color: "var(--text)" }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 4px 0" }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 4px 0" }}>
         {setNumber ? `Exam Set ${setNumber}` : "Custom Quiz"}
       </h1>
       <p style={{ color: "var(--muted)", fontSize: 13, margin: "0 0 28px 0" }}>
