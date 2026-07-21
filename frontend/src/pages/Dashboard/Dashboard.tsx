@@ -134,7 +134,8 @@ const Dashboard: React.FC = () => {
     : null;
 
   // Practice data
-  const practiceAttempts = submitted.filter(a => a.mode === "STUDY" && (a.total ?? 0) >= 50);
+  // Practice data — PracticeSessionPage now creates real mode:"PRACTICE" attempts
+  const practiceAttempts = submitted.filter(a => a.mode === "PRACTICE");
   const lastPractice = practiceAttempts[0];
 
   // Exam data
@@ -269,10 +270,13 @@ const Dashboard: React.FC = () => {
           </div>
           {lastPractice ? (
             <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                Last: <span style={{ fontWeight: 600, color: (lastPractice.percent ?? 0) >= 75 ? "var(--success,#34c759)" : "var(--warning,#ff9500)" }}>{lastPractice.percent}%</span>
-                {" · "}{new Date(lastPractice.submittedAt!).toLocaleDateString()}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}>
+                <span>{practiceAttempts.length} session{practiceAttempts.length > 1 ? "s" : ""}</span>
+                <span>
+                  Last: <span style={{ fontWeight: 600, color: (lastPractice.percent ?? 0) >= 75 ? "var(--success,#34c759)" : "var(--warning,#ff9500)" }}>{lastPractice.percent}%</span>
+                </span>
               </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{new Date(lastPractice.submittedAt!).toLocaleDateString()}</div>
             </div>
           ) : (
             <div style={S.emptyState}>No practice sessions yet</div>

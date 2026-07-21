@@ -118,23 +118,44 @@ export default function PracticeSessionPage() {
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const progressFillRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const startSession = () => {
     setPhase("loading");
     fetch(`${API_BASE}/questions`)
       .then((r) => r.json())
-      .then((data: Question[]) => {
-        setQuestions(buildWeightedSet(data));
+      .then(async (data: Question[]) => {
+        const weighted = buildWeightedSet(data);
+        const questionIds = weighted.map((q) => q.id);
+
+        const res = await fetch(`${API_BASE}/attempts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "PRACTICE", durationSec: 0, questionIds }),
+        });
+        if (!res.ok) throw new Error("Failed to create practice attempt");
+        const created = await res.json();
+
+        // Server returns questions in the same order as questionIds, now with
+        // isCorrect/justification revealed (Practice checks answers immediately,
+        // unlike Exam which withholds until submit).
+        setQuestions(created.questions);
+        setAttemptId(created.attemptId);
         setIndex(0);
         setSelectedChoiceId(null);
         setAnswers([]);
         setPhase("active");
       })
       .catch(() => setPhase("error"));
+  };
+
+  useEffect(() => {
+    startSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setNumber]);
 
   useEffect(() => {
@@ -157,9 +178,27 @@ export default function PracticeSessionPage() {
     setPhase("checked");
   };
 
+  const finishIfLast = async () => {
+    if (!attemptId) return;
+    try {
+      await fetch(`${API_BASE}/attempts/${attemptId}/submit`, { method: "POST" });
+    } catch {
+      // non-fatal — the score is already computed client-side for the results screen
+    }
+  };
+
   const handleNext = () => {
     if (!currentQuestion || !selectedChoiceId) return;
     const choice = currentQuestion.choices.find((c) => c.id === selectedChoiceId);
+
+    if (attemptId) {
+      fetch(`${API_BASE}/attempts/${attemptId}/answers/${currentQuestion.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ choiceId: selectedChoiceId }),
+      }).catch(() => {});
+    }
+
     setAnswers((prev) => [...prev, {
       questionId: currentQuestion.id,
       choiceId: selectedChoiceId,
@@ -171,6 +210,7 @@ export default function PracticeSessionPage() {
       setPhase("active");
     } else {
       setPhase("results");
+      finishIfLast();
     }
   };
 
@@ -183,19 +223,12 @@ export default function PracticeSessionPage() {
       setPhase("active");
     } else {
       setPhase("results");
+      finishIfLast();
     }
   };
 
   const handleRetry = () => {
-    fetch(`${API_BASE}/questions`)
-      .then((r) => r.json())
-      .then((data: Question[]) => {
-        setQuestions(buildWeightedSet(data));
-        setIndex(0);
-        setSelectedChoiceId(null);
-        setAnswers([]);
-        setPhase("active");
-      });
+    startSession();
   };
 
   const pageStyle: React.CSSProperties = {

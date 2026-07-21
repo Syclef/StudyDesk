@@ -138,8 +138,8 @@ if (selected.length === 0) return reply.badRequest("No questions found");
         id: c.id,
         label: c.label, 
         text: c.text,
-        isCorrect: mode === "STUDY" ? c.isCorrect : false,
-        justification: mode === "STUDY" ? c.justification : null,
+        isCorrect: mode !== "EXAM" ? c.isCorrect : false,
+        justification: mode !== "EXAM" ? c.justification : null,
       })),
     })),
   };
