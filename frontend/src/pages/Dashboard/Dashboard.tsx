@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getStudyProgress } from "../../utils/studyProgress";
 
@@ -6,6 +6,14 @@ const API_BASE = "http://127.0.0.1:4000";
 const TOTAL_QUESTIONS = 1065;
 const DEFAULT_EXAM_DATE = "2026-08-16";
 const EXAM_DATE_KEY = "studydesk_exam_date";
+
+const DOMAIN_NAMES: Record<string, string> = {
+  D1: "Information System Auditing Process",
+  D2: "Governance and Management of IT",
+  D3: "IS Acquisition, Development & Implementation",
+  D4: "IS Operations and Business Resilience",
+  D5: "Protection of Information Assets",
+};
 
 interface AttemptSummary {
   id: string;
@@ -16,6 +24,19 @@ interface AttemptSummary {
   startedAt: string;
   submittedAt: string | null;
 }
+
+interface CategorySummary {
+  domain: string;
+  categories: { name: string; count: number }[];
+}
+
+// Module accent colors — used only as a small identity dot + link color,
+// never as a full border/stripe, so the three cards read as one family.
+const MODULE_COLOR = {
+  study: "var(--accent)",
+  practice: "var(--success,#34c759)",
+  exam: "var(--warning,#ff9500)",
+};
 
 const S = {
   label: {
@@ -45,13 +66,27 @@ const S = {
     padding: "18px 20px",
     display: "flex",
     flexDirection: "column" as const,
-    justifyContent: "space-between",
   } as React.CSSProperties,
+  emptyState: {
+    textAlign: "center" as const,
+    padding: "14px 0 4px 0",
+    color: "var(--muted)",
+    fontSize: 12,
+  } as React.CSSProperties,
+  dot: (color: string): React.CSSProperties => ({
+    display: "inline-block",
+    width: 7,
+    height: 7,
+    borderRadius: "50%",
+    background: color,
+    marginRight: 7,
+  }),
 };
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [examDate, setExamDate] = useState(() => localStorage.getItem(EXAM_DATE_KEY) ?? DEFAULT_EXAM_DATE);
   const [editingDate, setEditingDate] = useState(false);
@@ -62,6 +97,11 @@ const Dashboard: React.FC = () => {
       .then((r) => r.json())
       .then((data: AttemptSummary[]) => { setAttempts(data); setLoading(false); })
       .catch(() => setLoading(false));
+
+    fetch(`${API_BASE}/categories`)
+      .then((r) => r.json())
+      .then((data: CategorySummary[]) => setCategories(data))
+      .catch(() => {});
   }, []);
 
   const saveDate = () => {
@@ -77,10 +117,13 @@ const Dashboard: React.FC = () => {
   const daysLeft = Math.max(Math.ceil((exam.getTime() - now.getTime()) / 86400000), 0);
   const submitted = attempts.filter(a => a.submittedAt);
   const totalAttempted = submitted.reduce((s, a) => s + (a.total ?? 0), 0);
-  const totalCorrect = submitted.reduce((s, a) => s + (a.score ?? 0), 0);
-  const accuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
   const progressPct = Math.min(Math.round((totalAttempted / TOTAL_QUESTIONS) * 100), 100);
   const dailyTarget = daysLeft > 0 ? Math.ceil(Math.max(TOTAL_QUESTIONS - totalAttempted, 0) / daysLeft) : 0;
+
+  // Note: exam accuracy/best-score detail now lives only in the Exam card
+  // (attempts, Best %, Last %) — the top row shows Best Exam Score as the
+  // single headline readiness number instead of duplicating it here.
+  const examAttempts = submitted.filter(a => a.mode === "EXAM");
 
   // Study module data
   const studyProgress = getStudyProgress();
@@ -95,26 +138,39 @@ const Dashboard: React.FC = () => {
   const lastPractice = practiceAttempts[0];
 
   // Exam data
-  const examAttempts = submitted.filter(a => a.mode === "EXAM");
   const bestExam = examAttempts.length > 0 ? Math.max(...examAttempts.map(a => a.percent ?? 0)) : null;
   const lastExam = examAttempts[0];
 
-  const accColor = accuracy >= 75 ? "var(--success,#34c759)" : accuracy >= 60 ? "var(--warning,#ff9500)" : accuracy > 0 ? "var(--danger,#ff3b30)" : "var(--text)";
   const examColor = bestExam === null ? "var(--muted)" : bestExam >= 75 ? "var(--success,#34c759)" : bestExam >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)";
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
+  // ── Domain breakdown (fills the space below with real progress data) ──
+  const domainRows = useMemo(() => {
+    return Object.entries(DOMAIN_NAMES).map(([code, name]) => {
+      const domainCategories = categories.find(c => c.domain === code)?.categories ?? [];
+      const total = domainCategories.reduce((s, c) => s + c.count, 0);
+      const attempted = domainCategories.reduce((s, c) => s + (studyProgress[c.name]?.attempted ?? 0), 0);
+      const correct = domainCategories.reduce((s, c) => s + (studyProgress[c.name]?.correct ?? 0), 0);
+      const pct = total > 0 ? Math.round((attempted / total) * 100) : 0;
+      const acc = attempted > 0 ? Math.round((correct / attempted) * 100) : null;
+      return { code, name, pct, acc, attempted, total };
+    });
+  }, [categories, studyProgress]);
+
+  const hasAnyDomainData = domainRows.some(d => d.attempted > 0);
+
   return (
     <div style={{
-      height: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      padding: "20px 28px",
-      gap: 14,
+      minHeight: "100vh",
+      padding: "20px clamp(20px, 4vw, 64px) 40px",
       color: "var(--text)",
       boxSizing: "border-box",
-      overflow: "hidden",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+      display: "flex",
+      flexDirection: "column",
+      gap: 14,
+      width: "100%",
     }}>
 
       {/* ── Header ── */}
@@ -148,8 +204,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* ── Row 1: Stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-        {/* Progress */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
         <div style={S.card}>
           <div style={S.label}>Progress</div>
           <div style={S.value}>{loading ? "—" : `${progressPct}%`}</div>
@@ -159,24 +214,12 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Accuracy */}
-        <div style={S.card}>
-          <div style={S.label}>Avg Accuracy</div>
-          <div style={{ ...S.value, color: totalAttempted > 0 ? accColor : "var(--text)" }}>{loading ? "—" : totalAttempted > 0 ? `${accuracy}%` : "—"}</div>
-          <div style={S.sub}>{totalAttempted > 0 ? `${totalCorrect.toLocaleString()} correct` : "No attempts yet"}</div>
-          <div style={{ height: 3, borderRadius: 999, background: "var(--border)", overflow: "hidden", marginTop: 10 }}>
-            <div style={{ height: "100%", width: `${accuracy}%`, background: accColor, borderRadius: 999 }} />
-          </div>
-        </div>
-
-        {/* Days Left */}
         <div style={S.card}>
           <div style={S.label}>Days Left</div>
           <div style={{ ...S.value, color: daysLeft <= 14 && daysLeft > 0 ? "var(--danger,#ff3b30)" : "var(--text)" }}>{daysLeft}</div>
           <div style={S.sub}>Daily target: {loading ? "—" : `${dailyTarget} Qs`}</div>
         </div>
 
-        {/* Best Exam */}
         <div style={S.card}>
           <div style={S.label}>Best Exam Score</div>
           <div style={{ ...S.value, color: examColor }}>{bestExam !== null ? `${bestExam}%` : "—"}</div>
@@ -185,85 +228,120 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* ── Row 2: Module Cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, flex: 1, minHeight: 0 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, alignItems: "start" }}>
 
         {/* Study */}
-        <div style={{ ...S.card, cursor: "pointer", borderTop: "2px solid var(--accent)" }}
+        <div style={{ ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s" }}
           onClick={() => navigate("/study")}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--card-bg)"}>
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"; e.currentTarget.style.borderColor = MODULE_COLOR.study; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--card-bg)"; e.currentTarget.style.borderColor = "var(--card-border)"; }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Study</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4, display: "flex", alignItems: "center" }}>
+              <span style={S.dot(MODULE_COLOR.study)} />Study
+            </div>
             <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>Review by domain · per category · with explanations after each answer</div>
           </div>
-          <div style={{ marginTop: 12 }}>
-            {studiedCount > 0 ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
-                  <span>{studiedCount} categories studied</span>
-                  {studyAccuracy !== null && <span style={{ fontWeight: 600, color: studyAccuracy >= 75 ? "var(--success,#34c759)" : studyAccuracy >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>{studyAccuracy}% avg</span>}
-                </div>
-                <div style={{ height: 3, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.round(studiedCount / 61 * 100)}%`, background: "var(--accent)", borderRadius: 999 }} />
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>Not started yet</div>
-            )}
-            <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 500, marginTop: 8 }}>Open Study →</div>
-          </div>
+          {studiedCount > 0 ? (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                <span>{studiedCount} categories studied</span>
+                {studyAccuracy !== null && <span style={{ fontWeight: 600, color: studyAccuracy >= 75 ? "var(--success,#34c759)" : studyAccuracy >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>{studyAccuracy}% avg</span>}
+              </div>
+              <div style={{ height: 3, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.round(studiedCount / 61 * 100)}%`, background: MODULE_COLOR.study, borderRadius: 999 }} />
+              </div>
+            </div>
+          ) : (
+            <div style={S.emptyState}>Not started yet</div>
+          )}
         </div>
 
         {/* Practice */}
-        <div style={{ ...S.card, cursor: "pointer", borderTop: "2px solid var(--success,#34c759)" }}
+        <div style={{ ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s" }}
           onClick={() => navigate("/practice")}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--card-bg)"}>
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"; e.currentTarget.style.borderColor = MODULE_COLOR.practice; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--card-bg)"; e.currentTarget.style.borderColor = "var(--card-border)"; }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Practice</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4, display: "flex", alignItems: "center" }}>
+              <span style={S.dot(MODULE_COLOR.practice)} />Practice
+            </div>
             <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>5 sets · 150 questions · no timer · see correct answers immediately</div>
           </div>
-          <div style={{ marginTop: 12 }}>
-            {lastPractice ? (
+          {lastPractice ? (
+            <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Last: <span style={{ fontWeight: 600, color: (lastPractice.percent ?? 0) >= 75 ? "var(--success,#34c759)" : "var(--warning,#ff9500)" }}>{lastPractice.percent}%</span>
                 {" · "}{new Date(lastPractice.submittedAt!).toLocaleDateString()}
               </div>
-            ) : (
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>No practice sessions yet</div>
-            )}
-            <div style={{ fontSize: 12, color: "var(--success,#34c759)", fontWeight: 500, marginTop: 8 }}>Open Practice →</div>
-          </div>
+            </div>
+          ) : (
+            <div style={S.emptyState}>No practice sessions yet</div>
+          )}
         </div>
 
         {/* Exam */}
-        <div style={{ ...S.card, cursor: "pointer", borderTop: "2px solid var(--warning,#ff9500)" }}
+        <div style={{ ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s" }}
           onClick={() => navigate("/exam")}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--card-bg)"}>
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--panel-2,var(--card-bg))"; e.currentTarget.style.borderColor = MODULE_COLOR.exam; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--card-bg)"; e.currentTarget.style.borderColor = "var(--card-border)"; }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Exam</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4, display: "flex", alignItems: "center" }}>
+              <span style={S.dot(MODULE_COLOR.exam)} />Exam
+            </div>
             <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>5 sets · 150 questions · 4 hours · timed · no answers until submitted</div>
           </div>
-          <div style={{ marginTop: 12 }}>
-            {bestExam !== null ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}>
-                  <span>{examAttempts.length} attempt{examAttempts.length > 1 ? "s" : ""}</span>
-                  <span style={{ fontWeight: 600, color: examColor }}>Best: {bestExam}% {bestExam >= 75 ? "✓" : ""}</span>
+          {bestExam !== null ? (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}>
+                <span>{examAttempts.length} attempt{examAttempts.length > 1 ? "s" : ""}</span>
+                <span style={{ fontWeight: 600, color: examColor }}>Best: {bestExam}% {bestExam >= 75 ? "✓" : ""}</span>
+              </div>
+              {lastExam && (
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                  Last: {lastExam.percent}% · {formatDate(lastExam.submittedAt!)}
                 </div>
-                {lastExam && (
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                    Last: {lastExam.percent}% · {formatDate(lastExam.submittedAt!)}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>No exam attempts yet</div>
-            )}
-            <div style={{ fontSize: 12, color: "var(--warning,#ff9500)", fontWeight: 500, marginTop: 8 }}>Open Exam →</div>
-          </div>
+              )}
+            </div>
+          ) : (
+            <div style={S.emptyState}>No exam attempts yet</div>
+          )}
         </div>
+      </div>
+
+      {/* ── Row 3: Domain Breakdown — fills the remaining space with real progress data ── */}
+      <div style={S.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Domain Breakdown</div>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>{TOTAL_QUESTIONS.toLocaleString()} questions across 5 domains</div>
+        </div>
+
+        {hasAnyDomainData ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {domainRows.map(d => (
+              <div key={d.code}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+                  <span style={{ color: "var(--text)" }}>
+                    <span style={{ color: "var(--muted)", fontWeight: 600, marginRight: 6 }}>{d.code}</span>
+                    {d.name}
+                  </span>
+                  <span style={{ color: "var(--muted)" }}>
+                    {d.attempted}/{d.total}
+                    {d.acc !== null && (
+                      <strong style={{ marginLeft: 8, color: d.acc >= 75 ? "var(--success,#34c759)" : d.acc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>
+                        {d.acc}%
+                      </strong>
+                    )}
+                  </span>
+                </div>
+                <div style={{ height: 4, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${d.pct}%`, background: "var(--accent)", borderRadius: 999 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={S.emptyState}>Start studying a category to see your domain-by-domain breakdown here.</div>
+        )}
       </div>
 
     </div>
