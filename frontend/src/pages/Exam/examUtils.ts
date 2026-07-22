@@ -96,6 +96,7 @@ export async function buildExamSession(args: {
       mode: "EXAM",
       durationSec: (mock ? 240 : minutes) * 60,
       questionIds,
+      mockSlot: mock,
     }),
   });
 

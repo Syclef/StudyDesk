@@ -135,7 +135,7 @@ export default function PracticeSessionPage() {
         const res = await fetch(`${API_BASE}/attempts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "PRACTICE", durationSec: 0, questionIds }),
+          body: JSON.stringify({ mode: "PRACTICE", durationSec: 0, questionIds, mockSlot: Number(setNumber) }),
         });
         if (!res.ok) throw new Error("Failed to create practice attempt");
         const created = await res.json();

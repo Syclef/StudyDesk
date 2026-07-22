@@ -48,7 +48,7 @@ app.post("/scores/:game", async (req, reply) => {
 
 app.get("/attempts", async (req) => {
   const { mode } = req.query as { mode?: string };
-  return prisma.attempt.findMany({
+  const rows = await prisma.attempt.findMany({
     where: {
       submittedAt: { not: null },
       ...(mode && { mode: mode as any }),
@@ -58,23 +58,37 @@ app.get("/attempts", async (req) => {
     select: {
       id: true,
       mode: true,
+      mockSlot: true,
       score: true,
       total: true,
       percent: true,
       startedAt: true,
       submittedAt: true,
+      questions: {
+        take: 1,
+        select: { question: { select: { domain: true } } },
+      },
     },
   });
+
+  // Flatten the nested lookup into a simple `domain` field (Study sessions
+  // are single-category, so the first question's domain represents the
+  // whole session) — used to label Recent Activity like "D1 Quiz".
+  return rows.map(({ questions, ...rest }) => ({
+    ...rest,
+    domain: questions[0]?.question.domain ?? null,
+  }));
 });
 
 app.post("/attempts", async (req, reply) => {
-  const { mode, domain, category, questionCount, durationSec, questionIds } = req.body as {
+  const { mode, domain, category, questionCount, durationSec, questionIds, mockSlot } = req.body as {
     mode: "PRACTICE" | "EXAM" | "STUDY";
     domain?: string;
     category?: string;
     questionCount?: number;
     durationSec: number;
     questionIds?: string[];
+    mockSlot?: number;
   };
 
   const ANON_USER_ID = "anon";
@@ -114,6 +128,7 @@ if (selected.length === 0) return reply.badRequest("No questions found");
     data: {
       userId: ANON_USER_ID,
       mode,
+      mockSlot,
       durationSec,
       total: selected.length,
       questions: {
@@ -251,6 +266,132 @@ app.get("/attempts/:id/results", async (req, reply) => {
       };
     }),
   };
+});
+
+// ─── Domain progress ─────────────────────────────────────────────────────────
+// GET /progress/domains          → combined across Study + Practice + Exam
+// GET /progress/domains?mode=X   → scoped to a single mode (e.g. Study-only,
+//                                   used by "Current Study Plan" so it can't be
+//                                   marked "in progress" by Practice/Exam activity)
+
+app.get("/progress/domains", async (req, reply) => {
+  try {
+    const { mode } = req.query as { mode?: string };
+
+    const questionCounts = await prisma.question.groupBy({
+      by: ["domain"],
+      where: { active: true },
+      _count: { id: true },
+    });
+
+    // Practice counts progressively — an abandoned Practice set still counts
+    // its already-answered questions, so quitting partway can correctly
+    // surface a domain as weak rather than showing nothing at all. Study and
+    // Exam still require a full submission (Exam mirrors the real exam:
+    // a half-finished mock score isn't meaningful; Study sets are short
+    // enough that finishing them is the norm).
+    // Note: despite the name, this can include unsubmitted attempts —
+    // specifically in-progress/abandoned Practice sessions (see OR clause above).
+    const eligibleAttempts = await prisma.attempt.findMany({
+      where: {
+        OR: [
+          { submittedAt: { not: null } },
+          { mode: "PRACTICE" },
+        ],
+        ...(mode && { mode: mode as any }),
+      },
+      select: { id: true, submittedAt: true, startedAt: true },
+    });
+    const submittedAtById = new Map(eligibleAttempts.map((a) => [a.id, (a.submittedAt ?? a.startedAt).getTime()]));
+    const submittedIds = eligibleAttempts.map((a) => a.id);
+
+    // Pull every answered question (across Study/Practice/Exam), then keep
+    // only the latest answer per question so repeat attempts on the same
+    // question don't inflate coverage — this measures unique questions seen
+    // and whether you currently get them right, not total repetitions.
+    const answers = submittedIds.length === 0 ? [] : await prisma.attemptAnswer.findMany({
+      where: {
+        choiceId: { not: null },
+        attemptId: { in: submittedIds },
+      },
+      select: {
+        questionId: true,
+        attemptId: true,
+        choiceId: true,
+        question: { select: { domain: true, choices: { select: { id: true, isCorrect: true } } } },
+      },
+    });
+
+    answers.sort((a, b) => (submittedAtById.get(b.attemptId) ?? 0) - (submittedAtById.get(a.attemptId) ?? 0));
+
+    const latestByQuestion = new Map<string, (typeof answers)[number]>();
+    for (const a of answers) {
+      if (!latestByQuestion.has(a.questionId)) {
+        latestByQuestion.set(a.questionId, a);
+      }
+    }
+
+    const stats: Record<string, { attempted: number; correct: number }> = {};
+    for (const a of latestByQuestion.values()) {
+      const d = a.question.domain;
+      if (!stats[d]) stats[d] = { attempted: 0, correct: 0 };
+      stats[d].attempted++;
+      const isCorrect = a.question.choices.find((c) => c.id === a.choiceId)?.isCorrect ?? false;
+      if (isCorrect) stats[d].correct++;
+    }
+
+    return questionCounts.map((qc) => ({
+      domain: qc.domain,
+      total: qc._count.id,
+      attempted: stats[qc.domain]?.attempted ?? 0,
+      correct: stats[qc.domain]?.correct ?? 0,
+    }));
+  } catch (err) {
+    req.log.error(err);
+    return reply.internalServerError("Failed to compute domain progress");
+  }
+});
+
+// ─── Study streak (consecutive days with any submitted attempt) ────────────
+
+app.get("/progress/streak", async (req, reply) => {
+  try {
+    const attempts = await prisma.attempt.findMany({
+      where: { submittedAt: { not: null } },
+      select: { submittedAt: true },
+    });
+
+    const activeDates = new Set(
+      attempts.map((a) => a.submittedAt!.toISOString().slice(0, 10))
+    );
+
+    const today = new Date();
+    const last7Days: { date: string; active: boolean }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      last7Days.push({ date: key, active: activeDates.has(key) });
+    }
+
+    // Count consecutive active days ending today; if today has no activity
+    // yet, count back from yesterday instead (so the streak isn't zeroed
+    // out just because you haven't studied yet today).
+    let currentStreak = 0;
+    const cursor = new Date(today);
+    if (!activeDates.has(cursor.toISOString().slice(0, 10))) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    while (activeDates.has(cursor.toISOString().slice(0, 10))) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return { currentStreak, last7Days };
+  } catch (err) {
+    req.log.error(err);
+    return reply.internalServerError("Failed to compute streak");
+  }
 });
 
 // ─── Reset ─────────────────────────────────────────────────────────────────
