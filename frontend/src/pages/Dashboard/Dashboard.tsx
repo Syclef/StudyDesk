@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import DailyQuizModal from "./DailyQuizModal";
 import HelpModal from "./HelpModal";
 import AssessmentQuizModal, { type AssessmentPerDomain } from "./AssessmentQuizModal";
+import InfoModal from "./InfoModal";
 import { useTheme } from "../../utils/theme";
+import { computeExamCycles } from "../../utils/examCycles";
 
 const API_BASE = "http://127.0.0.1:4000";
 const DEFAULT_EXAM_DATE = "2026-08-16";
@@ -62,6 +64,18 @@ interface AttemptSummary {
 
 interface DomainProgress {
   domain: string;
+  total: number;
+  attempted: number;
+  correct: number;
+}
+
+interface CategorySummary {
+  domain: string;
+  categories: { name: string; count: number }[];
+}
+
+interface CategoryProgress {
+  category: string;
   total: number;
   attempted: number;
   correct: number;
@@ -130,7 +144,7 @@ const S = {
 
 // Circular progress ring — pure SVG, themed entirely via CSS variables so
 // it renders correctly in both light and dark without extra work.
-const ProgressRing: React.FC<{ pct: number; size?: number }> = ({ pct, size = 140 }) => {
+const ProgressRing: React.FC<{ pct: number; size?: number; label?: string }> = ({ pct, size = 140, label = "Readiness" }) => {
   const stroke = 10;
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
@@ -149,7 +163,7 @@ const ProgressRing: React.FC<{ pct: number; size?: number }> = ({ pct, size = 14
         {pct}%
       </text>
       <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.09} fill="var(--muted)">
-        Readiness
+        {label}
       </text>
     </svg>
   );
@@ -159,7 +173,19 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
   const [domainProgress, setDomainProgress] = useState<DomainProgress[]>([]);
+  const [examDomainProgress, setExamDomainProgress] = useState<DomainProgress[]>([]);
   const [studyDomainProgress, setStudyDomainProgress] = useState<DomainProgress[]>([]);
+  const [practiceDomainProgress, setPracticeDomainProgress] = useState<DomainProgress[]>([]);
+  const [categoriesByDomain, setCategoriesByDomain] = useState<CategorySummary[]>([]);
+  const [categoryProgress, setCategoryProgress] = useState<CategoryProgress[]>([]);
+  const [weakAreaPrompt, setWeakAreaPrompt] = useState<{
+    domainCode: string;
+    domainName: string;
+    domainAcc: number | null;
+    source: "study" | "practice" | "combined";
+    categoryName: string;
+    categoryAcc: number;
+  } | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [dailyQuizResult, setDailyQuizResult] = useState<DailyQuizResult | null>(null);
   const [showDailyQuiz, setShowDailyQuiz] = useState(false);
@@ -171,6 +197,8 @@ const Dashboard: React.FC = () => {
     () => (localStorage.getItem(STUDY_PLAN_MODE_KEY) as "hybrid" | "adaptive") ?? "hybrid"
   );
   const [showStudyPlanInfo, setShowStudyPlanInfo] = useState(false);
+  const [showReadinessInfo, setShowReadinessInfo] = useState(false);
+  const [showFocusAreasInfo, setShowFocusAreasInfo] = useState(false);
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<{
     perDomain: Record<string, AssessmentPerDomain>;
@@ -202,6 +230,14 @@ const Dashboard: React.FC = () => {
       .then((data: DomainProgress[]) => setDomainProgress(Array.isArray(data) ? data : []))
       .catch(() => setDomainProgress([]));
 
+    // Exam-only view — Overall Readiness should reflect how you'd do under
+    // real exam conditions specifically, not blended with untimed
+    // Study/Practice performance (which tends to run higher).
+    fetch(`${API_BASE}/progress/domains?mode=EXAM`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: DomainProgress[]) => setExamDomainProgress(Array.isArray(data) ? data : []))
+      .catch(() => setExamDomainProgress([]));
+
     // Study-only view — Current Study Plan should only reflect Study-module
     // activity, not Practice/Exam sessions that happened to touch the same
     // questions (those still count toward the combined Overall Progress above).
@@ -209,6 +245,25 @@ const Dashboard: React.FC = () => {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: DomainProgress[]) => setStudyDomainProgress(Array.isArray(data) ? data : []))
       .catch(() => setStudyDomainProgress([]));
+
+    // Practice-only view — right half of Focus Areas.
+    fetch(`${API_BASE}/progress/domains?mode=PRACTICE`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: DomainProgress[]) => setPracticeDomainProgress(Array.isArray(data) ? data : []))
+      .catch(() => setPracticeDomainProgress([]));
+
+    // Domain → category mapping + per-category combined accuracy — used so
+    // Focus Areas can jump directly into the single weakest category inside
+    // a weak domain, instead of just landing you on the domain's full list.
+    fetch(`${API_BASE}/categories`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: CategorySummary[]) => setCategoriesByDomain(Array.isArray(data) ? data : []))
+      .catch(() => setCategoriesByDomain([]));
+
+    fetch(`${API_BASE}/progress/categories`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: CategoryProgress[]) => setCategoryProgress(Array.isArray(data) ? data : []))
+      .catch(() => setCategoryProgress([]));
 
     fetch(`${API_BASE}/progress/streak`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -251,6 +306,59 @@ const Dashboard: React.FC = () => {
     setShowAssessment(false);
   };
 
+  // Deep-link into Study for a specific domain — expands that domain's
+  // section and scrolls to it (StudyPage reads these sessionStorage keys
+  // on mount), instead of just dumping the user on the generic Study page.
+  const goToStudyDomain = (code: string) => {
+    sessionStorage.setItem("study_open_domains", JSON.stringify([code]));
+    sessionStorage.setItem("study_scroll_target", code);
+    navigate("/study");
+  };
+
+  // Focus Areas points at a real, known weak spot — so clicking it should
+  // jump straight into studying the single weakest category, not just land
+  // on the domain's full category list (that's what Current Study Plan is
+  // for, since it's about coverage, not a specific known weakness). Uses
+  // the same priority logic as StudyPage's own sort, so the category chosen
+  // here is exactly the one that would show "Focus here" if you browsed in.
+  const goToWeakestCategoryInDomain = (code: string, source: "study" | "practice" | "combined" = "combined") => {
+    const domainCategories = categoriesByDomain.find(c => c.domain === code)?.categories ?? [];
+    if (domainCategories.length === 0) {
+      goToStudyDomain(code); // no category data yet — fall back to browsing
+      return;
+    }
+
+    const priority = (cat: { name: string }) => {
+      const p = categoryProgress.find(c => c.category === cat.name);
+      const acc = p && p.attempted > 0 ? (p.correct / p.attempted) * 100 : null;
+      if (acc === null) return 1000;
+      if (acc < 75) return acc;
+      return 2000 + acc;
+    };
+    const sorted = [...domainCategories].sort((a, b) => priority(a) - priority(b));
+    const weakest = sorted[0];
+    const weakestPriority = priority(weakest);
+
+    if (weakestPriority >= 75) {
+      // Nothing genuinely weak yet (all untried or all strong) — browsing
+      // the domain makes more sense than jumping into an arbitrary category.
+      goToStudyDomain(code);
+      return;
+    }
+
+    const domainInfo = source === "study" ? studyDomainRows.find(d => d.code === code)
+      : source === "practice" ? practiceDomainRows.find(d => d.code === code)
+      : domainRows.find(d => d.code === code);
+    setWeakAreaPrompt({
+      domainCode: code,
+      domainName: domainInfo?.name ?? code,
+      domainAcc: domainInfo?.acc ?? null,
+      source,
+      categoryName: weakest.name,
+      categoryAcc: Math.round(weakestPriority),
+    });
+  };
+
   const saveDate = () => {
     if (!tempDate) return;
     localStorage.setItem(EXAM_DATE_KEY, tempDate);
@@ -267,35 +375,29 @@ const Dashboard: React.FC = () => {
   const exam = new Date(examDate);
   const daysLeft = Math.max(Math.ceil((exam.getTime() - now.getTime()) / 86400000), 0);
   const submitted = attempts.filter(a => a.submittedAt);
-  // Unique questions covered (not cumulative repeats) — summing per-domain
-  // coverage is safe since domains partition the question set.
-  const totalAttempted = domainProgress.reduce((s, d) => s + d.attempted, 0);
-  // Overall Accuracy (readiness) — this is what the ring shows, not coverage.
-  // Coverage alone doesn't answer "am I ready," so it's demoted to a small
-  // caption under the ring instead of being the headline number.
-  const totalCorrectCombined = domainProgress.reduce((s, d) => s + d.correct, 0);
-  const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrectCombined / totalAttempted) * 100) : 0;
-
-  // Recent Activity — real sessions across all three modules, already
-  // sorted desc by submittedAt from the server.
-  const recentActivity = submitted.slice(0, 1).map(a => {
-    const label = a.mode === "STUDY" ? `${a.domain ? `Domain ${a.domain.replace("D", "")}` : "Study"} Quiz`
-      : a.mode === "PRACTICE" ? `Practice Set ${a.mockSlot ?? ""}`.trim()
-      : `Mock Exam${a.mockSlot ? ` ${a.mockSlot}` : ""}`;
-    return { ...a, label };
-  });
-
-  // Flashcard activity — placeholder. FlashcardStudy.tsx only stores a
-  // per-card confidence map in localStorage right now, with no timestamped
-  // session log, so there's nothing real to show here yet. Once that's
-  // built, populate this the same way as recentActivity above (most recent
-  // session only, to match).
-  const flashcardActivity: { id: string; label: string; subtitle: string }[] = [];
+  // Overall Readiness (the ring) — the PASS RATE across your most recently
+  // COMPLETED CYCLE: one attempt on each of the 5 distinct Exam Sets. This
+  // maps directly onto the app's real content (there are exactly 5 Exam
+  // Sets), so "100%" means a genuine, complete claim — you passed every
+  // mock exam this app offers, not just some arbitrary sample of attempts.
+  // Retaking a set before finishing a cycle replaces that set's score for
+  // the cycle (same shared logic used to lock/warn on the Exam page), so
+  // cramming retakes can't inflate or corrupt the count. Uses an average
+  // instead of a per-question blend for the same reason as before: two
+  // strong attempts can't hide three weak ones, and all-time performance
+  // can't be stuck by early struggling attempts once a clean cycle happens.
+  const examOnlyForReadiness = submitted
+    .filter(a => a.mode === "EXAM" && a.percent !== null)
+    .map(a => ({ id: a.id, mockSlot: a.mockSlot, percent: a.percent, submittedAt: a.submittedAt }));
+  const { completedCycles } = computeExamCycles(examOnlyForReadiness);
+  const examAttemptsForReadiness = completedCycles.length > 0 ? completedCycles[completedCycles.length - 1] : null;
+  const examPassedCount = examAttemptsForReadiness?.passedCount ?? 0;
+  const overallAccuracy = examAttemptsForReadiness ? Math.round((examPassedCount / 5) * 100) : 0;
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  // ── Domain breakdown data (feeds Overall Progress legend, Current Study
-  //    Plan status, and Focus Areas — combining Study + Practice + Exam) ──
+  // ── Domain breakdown data (combining Study + Practice + Exam) — feeds
+  //    Focus Areas and Current Study Plan's coverage logic ──
   const domainRows = useMemo(() => {
     return Object.entries(DOMAIN_NAMES).map(([code, name]) => {
       const d = domainProgress.find(dp => dp.domain === code);
@@ -308,13 +410,25 @@ const Dashboard: React.FC = () => {
     });
   }, [domainProgress]);
 
-  // Weakest domains with real data — highest-signal callout for what to study next.
-  const focusAreas = useMemo(() => {
-    return domainRows
-      .filter(d => d.acc !== null)
-      .sort((a, b) => (a.acc ?? 0) - (b.acc ?? 0))
-      .slice(0, 2);
-  }, [domainRows]);
+  // Exam-only domain rows — feeds the Overall Readiness legend specifically,
+  // kept separate from the combined domainRows above.
+  const examDomainRows = useMemo(() => {
+    return Object.entries(DOMAIN_NAMES).map(([code, name]) => {
+      const d = examDomainProgress.find(dp => dp.domain === code);
+      const attempted = d?.attempted ?? 0;
+      const correct = d?.correct ?? 0;
+      const acc = attempted > 0 ? Math.round((correct / attempted) * 100) : null;
+      return { code, name, acc };
+    });
+  }, [examDomainProgress]);
+
+  // Focus Areas — domains that are ACTUALLY weak (below 60%, matching the
+  // red/amber/green convention used elsewhere on this dashboard), not just
+  // "whichever 2 happen to be lowest." A domain barely below 60% still shows
+  // up here; a domain solidly above it won't, no matter how it ranks
+  // relative to the others. Uses the combined Study+Practice+Exam data (not
+  // Exam-only) so this still works for anyone who skips Practice entirely.
+  const WEAK_THRESHOLD = 75;
 
   // Study-only domain view — Current Study Plan must reflect Study-module
   // activity specifically, not Practice/Exam sessions touching the same
@@ -329,6 +443,32 @@ const Dashboard: React.FC = () => {
       return { code, name, attempted, total, acc };
     });
   }, [studyDomainProgress]);
+
+  const practiceDomainRows = useMemo(() => {
+    return Object.entries(DOMAIN_NAMES).map(([code, name]) => {
+      const d = practiceDomainProgress.find(dp => dp.domain === code);
+      const attempted = d?.attempted ?? 0;
+      const correct = d?.correct ?? 0;
+      const acc = attempted > 0 ? Math.round((correct / attempted) * 100) : null;
+      return { code, name, attempted, acc };
+    });
+  }, [practiceDomainProgress]);
+
+  // Focus Areas, split by module: left = Study-only weak domains, right =
+  // Practice-only. A domain with zero attempts counts as weak here too —
+  // untried means you're not passing it, same as a real 0% would. Untried
+  // domains sort to the very top (most urgent — you haven't even started).
+  const studyFocusAreas = useMemo(() => {
+    return studyDomainRows
+      .filter(d => d.acc === null || d.acc < WEAK_THRESHOLD)
+      .sort((a, b) => (a.acc ?? -1) - (b.acc ?? -1));
+  }, [studyDomainRows]);
+
+  const practiceFocusAreas = useMemo(() => {
+    return practiceDomainRows
+      .filter(d => d.acc === null || d.acc < WEAK_THRESHOLD)
+      .sort((a, b) => (a.acc ?? -1) - (b.acc ?? -1));
+  }, [practiceDomainRows]);
 
   // Current Study Plan — two selectable strategies:
   // - "hybrid" (default): recommend domains you haven't touched yet first
@@ -479,31 +619,17 @@ const Dashboard: React.FC = () => {
 
             {assessmentResult && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <button
-                    onClick={() => setShowStudyPlanInfo(v => !v)}
-                    title="What do Hybrid and Adaptive mean?"
-                    style={{
-                      width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--muted)",
-                      background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
-                      lineHeight: 1, fontStyle: "italic" as const, fontFamily: "Georgia, serif",
-                    }}>
-                    i
-                  </button>
-                  {showStudyPlanInfo && (
-                    <div style={{
-                      position: "absolute", top: 22, right: 0, zIndex: 20, width: 240,
-                      background: "var(--card-bg)", border: "1px solid var(--card-border)",
-                      borderRadius: 10, boxShadow: "var(--shadow)", padding: "10px 12px",
-                      fontSize: 11, color: "var(--muted)", lineHeight: 1.5,
-                    }}>
-                      <strong style={{ color: "var(--text)" }}>Hybrid:</strong> unstudied domains first, then your weakest once everything's been touched.
-                      <br /><br />
-                      <strong style={{ color: "var(--text)" }}>Adaptive:</strong> always recommends your weakest domains, regardless of coverage.
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={() => setShowStudyPlanInfo(true)}
+                  title="What do Hybrid and Adaptive mean?"
+                  style={{
+                    width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--muted)",
+                    background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+                    lineHeight: 1, fontStyle: "italic" as const, fontFamily: "Georgia, serif",
+                  }}>
+                  i
+                </button>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
                   <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 999, padding: 2 }}>
@@ -552,7 +678,7 @@ const Dashboard: React.FC = () => {
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-around", gap: 12 }}>
                 {studyPlan.map(d => (
                   <div key={d.code}
-                    onClick={() => navigate("/study")}
+                    onClick={() => goToStudyDomain(d.code)}
                     style={{
                       flex: 1, display: "flex", flexDirection: "column", justifyContent: "center",
                       padding: "16px 20px", borderRadius: 12, cursor: "pointer",
@@ -584,22 +710,54 @@ const Dashboard: React.FC = () => {
 
         {/* Overall Progress — ring + domain legend beside it */}
         <div style={{ ...S.card, gridArea: "progress" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 28, minHeight: 0 }}>
-            <ProgressRing pct={loading ? 0 : overallAccuracy} size={185} />
-            <div style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ ...S.label, fontSize: 12 }}>Overall Readiness</div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+              <ProgressRing pct={loading ? 0 : overallAccuracy} size={185} label="Pass Rate" />
+              <div style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ ...S.label, fontSize: 12 }}>Overall Readiness</div>
+                  <button
+                    onClick={() => setShowReadinessInfo(true)}
+                    title="What does Overall Readiness measure?"
+                    style={{
+                      width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--muted)",
+                      background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+                      lineHeight: 1, fontStyle: "italic" as const, fontFamily: "Georgia, serif",
+                    }}>
+                    i
+                  </button>
+                </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-around", marginTop: 10, maxHeight: 185 }}>
-                {domainRows.map((d) => (
+                {examDomainRows.map((d) => (
                   <div key={d.code} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 14 }}>
                     <span style={{ display: "flex", alignItems: "center", color: "var(--muted)" }}>
                       <span style={S.dot(DOMAIN_COLORS[d.code])} />
                       Domain {d.code.replace("D", "")}
                     </span>
-                    <span style={{ color: "var(--text)", fontWeight: 600 }}>{d.acc !== null ? `${d.acc}%` : "—"}</span>
+                    <span style={{
+                      fontWeight: 600,
+                      color: d.acc === null ? "var(--muted)"
+                        : d.acc < 60 ? "var(--danger,#ff3b30)"
+                        : d.acc < 75 ? "var(--warning,#ff9500)"
+                        : "var(--success,#34c759)",
+                    }}>
+                      {d.acc !== null ? `${d.acc}%` : "—"}
+                    </span>
                   </div>
                 ))}
               </div>
+              </div>
             </div>
+            {examAttemptsForReadiness ? (
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                {examPassedCount}/5 Exam Sets passed last cycle
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                Complete all 5 Exam Sets once to see your first readiness score
+              </div>
+            )}
           </div>
         </div>
 
@@ -657,157 +815,103 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Row 2: Focus Areas — full-width, matching reference image ── */}
-      <div style={{ ...S.card, flex: 1.4 }}>
-        <div style={S.label}>Focus Areas</div>
-        <div style={{ fontSize: 13, color: "var(--muted)", margin: "2px 0 16px 0" }}>These are your weakest domains requiring improvement.</div>
-        <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-          {focusAreas.length > 0 ? (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-around", gap: 18 }}>
-              {focusAreas.map(d => (
-                <div key={d.code}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, marginBottom: 8 }}>
-                    <span style={{ color: "var(--text)" }}>
-                      <span style={{ color: "var(--muted)", fontWeight: 600, marginRight: 8 }}>{d.code}</span>
-                      {d.name}
-                    </span>
-                    <span style={{ fontWeight: 600, color: (d.acc ?? 0) >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>{d.acc}%</span>
-                  </div>
-                  <div style={{ height: 8, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${d.acc}%`, background: (d.acc ?? 0) >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)", borderRadius: 999 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 12, borderRadius: 14, background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
+      {/* ── Row 2: Focus Areas — split by module: Study (left) vs Practice (right) ── */}
+      <div style={{ ...S.card, flex: 2.8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={S.label}>Focus Areas</div>
+          <button
+            onClick={() => setShowFocusAreasInfo(true)}
+            title="What are Focus Areas?"
+            style={{
+              width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--muted)",
+              background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+              lineHeight: 1, fontStyle: "italic" as const, fontFamily: "Georgia, serif",
             }}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
-              <div style={{ ...S.emptyState, fontSize: 15, padding: 0 }}>Answer a few questions to see your weakest domains here.</div>
-            </div>
-          )}
+            i
+          </button>
         </div>
-      </div>
+        <div style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0 16px 0" }}>
+          Once you've studied, take an <strong style={{ color: "var(--text)" }}>Exam Set</strong> to see it reflected in Overall Readiness above.
+        </div>
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, minHeight: 0 }}>
 
-      {/* ── Recent Activity — split: main app (Study/Practice/Exam) vs Flashcards ── */}
-      <div style={{ ...S.card, flex: 1.4 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 16 }}>Recent Activity</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, flex: 1, minHeight: 0 }}>
-
-          {/* Left: Study, Practice, Exam */}
+          {/* Left: Study */}
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 12 }}>
-              Study · Practice · Exam
+              Study
             </div>
             <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-              {recentActivity.length > 0 ? (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                  {recentActivity.map((a) => (
-                    <div key={a.id} style={{
-                      flex: 1, display: "flex", alignItems: "center", gap: 16,
-                      padding: "20px 22px", borderRadius: 14,
-                      background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
-                    }}>
-                      <div style={{
-                        width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-                        background: "var(--accent-light, rgba(0,113,227,0.10))", color: "var(--accent)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="4" y="3" width="16" height="18" rx="2" />
-                          <path d="M8 3v3h8V3M9 12l2 2 4-4" />
-                        </svg>
+              {studyFocusAreas.length > 0 ? (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: 10 }}>
+                  {studyFocusAreas.map(d => (
+                    <div key={d.code} onClick={() => goToWeakestCategoryInDomain(d.code, "study")} style={{ cursor: "pointer" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ color: "var(--text)" }}>
+                          <span style={{ color: "var(--muted)", fontWeight: 600, marginRight: 8 }}>{d.code}</span>
+                          {d.name}
+                        </span>
+                        <span style={{ fontWeight: 600, color: d.acc === null ? "var(--danger,#ff3b30)" : d.acc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>
+                          {d.acc === null ? "Not attempted" : `${d.acc}%`}
+                        </span>
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{a.label}</div>
-                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 3 }}>
-                          {a.score !== null && a.total !== null ? `Score: ${a.score}/${a.total}` : new Date(a.submittedAt!).toLocaleDateString()}
-                        </div>
+                      <div style={{ height: 5, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${d.acc ?? 0}%`, background: d.acc === null ? "var(--danger,#ff3b30)" : d.acc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)", borderRadius: 999 }} />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 16,
-                  padding: "20px 22px", borderRadius: 14,
-                  background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
+                  flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 10, borderRadius: 14, background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
                 }}>
-                  <div style={{
-                    width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-                    background: "var(--accent-light, rgba(0,113,227,0.10))", color: "var(--accent)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="4" y="3" width="16" height="18" rx="2" />
-                      <path d="M8 3v3h8V3" />
-                    </svg>
-                  </div>
-                  <div style={{ ...S.emptyState, fontSize: 13, padding: 0, textAlign: "left" as const }}>Your recent Study, Practice, and Exam sessions will show up here.</div>
+                  <span style={{ fontSize: 22 }}>🎉</span>
+                  <div style={{ ...S.emptyState, fontSize: 13, padding: 0 }}>You're at {WEAK_THRESHOLD}%+ on every domain in Study.</div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right: Flashcards */}
+          {/* Right: Practice */}
           <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 28, display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 12 }}>
-              Flashcards
+              Practice
             </div>
             <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-              {flashcardActivity.length > 0 ? (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                  {flashcardActivity.map((f) => (
-                    <div key={f.id} style={{
-                      flex: 1, display: "flex", alignItems: "center", gap: 16,
-                      padding: "20px 22px", borderRadius: 14,
-                      background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
-                    }}>
-                      <div style={{
-                        width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-                        background: "var(--accent-light, rgba(0,113,227,0.10))", color: "var(--accent)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="5" width="18" height="14" rx="2" />
-                          <path d="M3 10h18" />
-                        </svg>
+              {practiceFocusAreas.length > 0 ? (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: 10 }}>
+                  {practiceFocusAreas.map(d => (
+                    <div key={d.code} onClick={() => goToWeakestCategoryInDomain(d.code, "practice")} style={{ cursor: "pointer" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ color: "var(--text)" }}>
+                          <span style={{ color: "var(--muted)", fontWeight: 600, marginRight: 8 }}>{d.code}</span>
+                          {d.name}
+                        </span>
+                        <span style={{ fontWeight: 600, color: d.acc === null ? "var(--danger,#ff3b30)" : d.acc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>
+                          {d.acc === null ? "Not attempted" : `${d.acc}%`}
+                        </span>
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{f.label}</div>
-                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 3 }}>{f.subtitle}</div>
+                      <div style={{ height: 5, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${d.acc ?? 0}%`, background: d.acc === null ? "var(--danger,#ff3b30)" : d.acc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)", borderRadius: 999 }} />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 16,
-                  padding: "20px 22px", borderRadius: 14,
-                  background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
+                  flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 10, borderRadius: 14, background: "var(--panel-2, var(--card-bg))", border: "1px solid var(--card-border)",
                 }}>
-                  <div style={{
-                    width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-                    background: "var(--accent-light, rgba(0,113,227,0.10))", color: "var(--accent)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="5" width="18" height="14" rx="2" />
-                      <path d="M3 10h18" />
-                    </svg>
-                  </div>
-                  <div style={{ ...S.emptyState, fontSize: 13, padding: 0, textAlign: "left" as const }}>Flashcard sessions will show up here.</div>
+                  <span style={{ fontSize: 22 }}>🎉</span>
+                  <div style={{ ...S.emptyState, fontSize: 13, padding: 0 }}>You're at {WEAK_THRESHOLD}%+ on every domain in Practice.</div>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
 
       {showDailyQuiz && (
         <DailyQuizModal
@@ -819,6 +923,105 @@ const Dashboard: React.FC = () => {
       )}
 
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+
+      {showStudyPlanInfo && (
+        <InfoModal title="Current Study Plan" onClose={() => setShowStudyPlanInfo(false)}>
+          <p style={{ margin: "0 0 14px 0" }}>
+            Domains you <strong>haven't finished covering yet in Study</strong> — based only on Study-module
+            coverage, not how well you're scoring elsewhere. Once a domain is fully covered, it drops off this
+            list for good, even if you're still getting it wrong in Practice or Exam (that's what Focus Areas
+            is for).
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            <strong>Hybrid:</strong> unstudied domains first, then your weakest once everything's been touched.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Adaptive:</strong> always recommends your weakest domains, regardless of coverage.
+          </p>
+        </InfoModal>
+      )}
+
+      {showFocusAreasInfo && (
+        <InfoModal title="Focus Areas" onClose={() => setShowFocusAreasInfo(false)}>
+          <p style={{ margin: "0 0 14px 0" }}>
+            Domains you're <strong>still getting wrong</strong> — split by module. <strong>Study</strong> (left)
+            shows weak domains based only on your Study-mode results; <strong>Practice</strong> (right) shows
+            weak domains based only on your Practice results.
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            Exam's weak domains aren't repeated here — they're already shown in Overall Readiness's domain
+            legend above.
+          </p>
+          <p style={{ margin: 0 }}>
+            This is different from Current Study Plan, which only tracks what you haven't finished studying
+            yet. A domain can drop off Current Study Plan once it's covered, but still show up here if you
+            keep getting it wrong afterward.
+          </p>
+        </InfoModal>
+      )}
+
+      {weakAreaPrompt && (
+        <InfoModal
+          title="Why this section?"
+          onClose={() => setWeakAreaPrompt(null)}
+          actionLabel="Start Studying"
+          onAction={() => {
+            navigate(`/session/study/${encodeURIComponent(weakAreaPrompt.categoryName)}`);
+            setWeakAreaPrompt(null);
+          }}
+        >
+          <p style={{ margin: "0 0 14px 0" }}>
+            Based on your{" "}
+            {weakAreaPrompt.source === "study" ? "Study" : weakAreaPrompt.source === "practice" ? "Practice" : "combined Study, Practice, and Exam"} results, you're scoring{" "}
+            <strong style={{ color: weakAreaPrompt.categoryAcc >= 60 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)" }}>
+              {weakAreaPrompt.categoryAcc}%
+            </strong>{" "}
+            on <strong>{weakAreaPrompt.categoryName}</strong>
+            {weakAreaPrompt.domainAcc !== null && (
+              <> — the main reason {weakAreaPrompt.domainCode} ({weakAreaPrompt.domainName}) is sitting at{" "}
+              {weakAreaPrompt.domainAcc}% in {weakAreaPrompt.source === "study" ? "Study" : weakAreaPrompt.source === "practice" ? "Practice" : "overall"}</>
+            )}.
+          </p>
+          <p style={{ margin: 0 }}>
+            Reviewing this section should help move both numbers before your next attempt.
+          </p>
+        </InfoModal>
+      )}
+
+      {showReadinessInfo && (
+        <InfoModal title="What is Overall Readiness?" onClose={() => setShowReadinessInfo(false)}>
+          <p style={{ margin: "0 0 14px 0" }}>
+            The percentage of your <strong>most recently completed cycle that passed</strong> — one attempt on
+            each of the 5 distinct Exam Sets, scored at 75% or higher.
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            The domain list beside the ring uses these attempts too — red under 60%, amber 60–74%, green 75%+ —
+            so a domain that's only weak on Exams (not Study or Practice) still shows up clearly here, even
+            though it won't appear in Focus Areas below.
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            An average can hide inconsistency: two strong attempts and three weak ones can still blend into a
+            deceptively okay-looking number. Pass rate fixes that. But all-time pass rate has its own problem —
+            it never lets go of your early attempts. Fail a cycle while you're still learning, then genuinely
+            improve and pass the next one, and all-time rate is stuck at a low number forever. Only counting
+            your most recent full cycle fixes that.
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            A cycle completes once you've attempted all 5 Exam Sets. Retaking a set before finishing the cycle
+            replaces that set's score for the cycle, so cramming retakes can't inflate or corrupt the count —
+            each set only counts once per cycle, whichever attempt was most recent.
+          </p>
+          <p style={{ margin: "0 0 14px 0" }}>
+            <strong>Aim for 100%</strong> — every Exam Set passing in the same cycle. Lower than that means
+            your good scores aren't reliable yet, not that you're halfway there.
+          </p>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13 }}>
+            This measures consistency on <em>this app's</em> mock exams — it isn't a prediction of your real
+            ISACA exam result. The real exam has its own scoring and question pool that no mock exam can fully
+            replicate, so treat this as a self-check, not a guarantee.
+          </p>
+        </InfoModal>
+      )}
 
       {showAssessment && (
         <AssessmentQuizModal

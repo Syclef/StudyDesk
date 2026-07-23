@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { computeExamCycles, PASS_THRESHOLD } from "../../utils/examCycles";
 
 const API_BASE = "http://127.0.0.1:4000";
 
 interface AttemptSummary {
   id: string;
   mode: string;
+  mockSlot: number | null;
   score: number | null;
   total: number | null;
   percent: number | null;
@@ -30,29 +32,45 @@ export default function ExamLandingPage() {
 
   useEffect(() => { fetchAttempts(); }, []);
 
-  const startExamSet = (slot: number) => {
-    navigate("/exam/intro", {
-      state: { mode: "full", domains: [1, 2, 3, 4, 5], count: 150, minutes: 240, mock: slot },
-    });
-  };
-
   const scoreColor = (pct: number | null) => {
     if (pct === null) return "var(--muted)";
-    if (pct >= 75) return "var(--success, #32d74b)";
+    if (pct >= PASS_THRESHOLD) return "var(--success, #32d74b)";
     if (pct >= 60) return "var(--warning, #ff9f0a)";
     return "var(--danger, #ff453a)";
   };
 
-  const sortedOldFirst = [...attempts].reverse();
   const totalAttempts = attempts.length;
   const bestScore = attempts.length > 0 ? Math.max(...attempts.map(a => a.percent ?? 0)) : null;
   const lastScore = attempts.length > 0 ? attempts[0].percent : null;
-  const passes = attempts.filter(a => (a.percent ?? 0) >= 75).length;
+  const passes = attempts.filter(a => (a.percent ?? 0) >= PASS_THRESHOLD).length;
 
+  // Real per-slot lookup (most recent attempt on that exact Exam Set, ever)
+  // — replaces the old positional guess that assumed attempts always
+  // happened in Set 1→5 order, which breaks the moment anything is retaken.
   const attemptsBySlot: Record<number, AttemptSummary | null> = {};
   for (let slot = 1; slot <= 5; slot++) {
-    attemptsBySlot[slot] = sortedOldFirst[slot - 1] ?? null;
+    const slotAttempts = attempts.filter(a => a.mockSlot === slot);
+    attemptsBySlot[slot] = slotAttempts[0] ?? null; // attempts is already sorted desc by submittedAt
   }
+
+  // Cycle state — which sets have been used since the last completed cycle
+  // (all 5 distinct sets attempted). Used to warn before a retake that would
+  // overwrite that set's score for the in-progress cycle.
+  const { currentCycleUsed } = computeExamCycles(attempts);
+
+  const startExamSet = (slot: number) => {
+    const alreadyUsedThisCycle = currentCycleUsed.get(slot);
+    if (alreadyUsedThisCycle) {
+      const proceed = confirm(
+        `You've already completed Exam Set ${slot} this cycle (scored ${alreadyUsedThisCycle.percent}%). ` +
+        `Retaking it now will replace that score for your current readiness cycle. Continue?`
+      );
+      if (!proceed) return;
+    }
+    navigate("/exam/intro", {
+      state: { mode: "full", domains: [1, 2, 3, 4, 5], count: 150, minutes: 240, mock: slot },
+    });
+  };
 
   return (
     <div style={{ padding: 32, maxWidth: 860, margin: "0 auto", color: "var(--text)" }}>
@@ -85,12 +103,12 @@ export default function ExamLandingPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {attempts.slice(0, 5).map((a, i) => {
               const pct = a.percent ?? 0;
-              const label = pct >= 75 ? "PASS" : pct >= 60 ? "BORDERLINE" : "FAIL";
+              const label = pct >= PASS_THRESHOLD ? "PASS" : pct >= 60 ? "BORDERLINE" : "FAIL";
               const color = scoreColor(a.percent);
               return (
                 <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                   <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                    Exam Set {sortedOldFirst.indexOf(a) + 1} · Attempt #{attempts.length - i}
+                    Exam Set {a.mockSlot ?? "?"} · Attempt #{attempts.length - i}
                   </span>
                   <span style={{ color: "var(--muted)", fontSize: 12 }}>
                     {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : "—"}
@@ -126,9 +144,10 @@ export default function ExamLandingPage() {
         {[1, 2, 3, 4, 5].map((n) => {
           const slotAttempt = attemptsBySlot[n];
           const pct = slotAttempt?.percent ?? null;
-          const passed = pct !== null && pct >= 75;
+          const passed = pct !== null && pct >= PASS_THRESHOLD;
           const attempted = slotAttempt !== null;
           const color = scoreColor(pct);
+          const usedThisCycle = currentCycleUsed.has(n);
 
           return (
             <div key={n} style={{
@@ -143,7 +162,17 @@ export default function ExamLandingPage() {
               }} />
 
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)" }}>Exam Set {n}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)" }}>Exam Set {n}</div>
+                  {usedThisCycle && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                      background: "var(--accent-light, rgba(0,113,227,0.10))", color: "var(--accent)",
+                    }}>
+                      Used this cycle
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
                   {attempted
                     ? `Last: ${pct}% · ${slotAttempt?.submittedAt ? new Date(slotAttempt.submittedAt).toLocaleDateString() : ""}`

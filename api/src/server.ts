@@ -352,6 +352,78 @@ app.get("/progress/domains", async (req, reply) => {
   }
 });
 
+// Per-CATEGORY variant of the same logic above — StudyPage needs this to know
+// which specific topic inside a domain is weak, not just the domain overall.
+// A domain can look fine on average while one category inside it is genuinely
+// bad, and vice versa. Combines Study + Practice + Exam, same as above —
+// deliberately NOT limited to Study-only, since a category's weakness might
+// only be visible through Practice/Exam attempts if it's never been studied.
+app.get("/progress/categories", async (req, reply) => {
+  try {
+    const { mode } = req.query as { mode?: string };
+
+    const questionCounts = await prisma.question.groupBy({
+      by: ["category"],
+      where: { active: true },
+      _count: { id: true },
+    });
+
+    const eligibleAttempts = await prisma.attempt.findMany({
+      where: {
+        OR: [
+          { submittedAt: { not: null } },
+          { mode: "PRACTICE" },
+        ],
+        ...(mode && { mode: mode as any }),
+      },
+      select: { id: true, submittedAt: true, startedAt: true },
+    });
+    const submittedAtById = new Map(eligibleAttempts.map((a) => [a.id, (a.submittedAt ?? a.startedAt).getTime()]));
+    const submittedIds = eligibleAttempts.map((a) => a.id);
+
+    const answers = submittedIds.length === 0 ? [] : await prisma.attemptAnswer.findMany({
+      where: {
+        choiceId: { not: null },
+        attemptId: { in: submittedIds },
+      },
+      select: {
+        questionId: true,
+        attemptId: true,
+        choiceId: true,
+        question: { select: { category: true, choices: { select: { id: true, isCorrect: true } } } },
+      },
+    });
+
+    answers.sort((a, b) => (submittedAtById.get(b.attemptId) ?? 0) - (submittedAtById.get(a.attemptId) ?? 0));
+
+    const latestByQuestion = new Map<string, (typeof answers)[number]>();
+    for (const a of answers) {
+      if (!latestByQuestion.has(a.questionId)) {
+        latestByQuestion.set(a.questionId, a);
+      }
+    }
+
+    const stats: Record<string, { attempted: number; correct: number }> = {};
+    for (const a of latestByQuestion.values()) {
+      const cat = a.question.category;
+      if (!stats[cat]) stats[cat] = { attempted: 0, correct: 0 };
+      stats[cat].attempted++;
+      const isCorrect = a.question.choices.find((c) => c.id === a.choiceId)?.isCorrect ?? false;
+      if (isCorrect) stats[cat].correct++;
+    }
+
+    return questionCounts.map((qc) => ({
+      category: qc.category,
+      total: qc._count.id,
+      attempted: stats[qc.category]?.attempted ?? 0,
+      correct: stats[qc.category]?.correct ?? 0,
+    }));
+  } catch (err) {
+    req.log.error(err);
+    return reply.internalServerError("Failed to compute category progress");
+  }
+});
+
 // ─── Study streak (consecutive days with any submitted attempt) ────────────
 
 app.get("/progress/streak", async (req, reply) => {

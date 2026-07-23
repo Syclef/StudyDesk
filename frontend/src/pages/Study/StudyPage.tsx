@@ -38,6 +38,12 @@ export default function StudyPage() {
   const [openDomains, setOpenDomains] = useState<Set<string>>(getOpenDomains);
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [progress, setProgress] = useState<Record<string, StudyCategoryProgress>>({});
+  // Combined Study+Practice+Exam accuracy per category — same underlying
+  // data Focus Areas uses, fetched here so "which topic is weak" reflects
+  // ALL your activity, not just Study-mode sessions (the local `progress`
+  // above only knows about Study, so it'd show nothing for a category
+  // you've only ever seen through Practice or Exam).
+  const [combinedProgress, setCombinedProgress] = useState<Record<string, { attempted: number; correct: number; total: number }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +55,15 @@ export default function StudyPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch(`${API_BASE}/progress/categories`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: { category: string; attempted: number; correct: number; total: number }[]) => {
+        const map: Record<string, { attempted: number; correct: number; total: number }> = {};
+        for (const row of data) map[row.category] = row;
+        setCombinedProgress(map);
+      })
+      .catch(() => setCombinedProgress({}));
   }, []);
 
   useEffect(() => {
@@ -59,6 +74,20 @@ export default function StudyPage() {
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  useEffect(() => {
+    // One-time deep-link support: Dashboard's Current Study Plan / Focus
+    // Areas set this before navigating here, so clicking a specific domain
+    // actually lands you on it (expanded + scrolled to) instead of just the
+    // generic Study page.
+    const target = sessionStorage.getItem("study_scroll_target");
+    if (target) {
+      sessionStorage.removeItem("study_scroll_target");
+      requestAnimationFrame(() => {
+        document.getElementById(`domain-${target}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   }, []);
 
   const toggleDomain = (code: string) => {
@@ -120,7 +149,7 @@ export default function StudyPage() {
                 const domainPct = domainTotal > 0 ? Math.min(100, Math.round((domainAttempted / domainTotal) * 100)) : 0;
 
                 return (
-                  <div key={code} className="sp-domain">
+                  <div key={code} id={`domain-${code}`} className="sp-domain">
                     <div className="sp-domain-header" onClick={() => toggleDomain(code)}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: domainPct > 0 ? 6 : 0 }}>
@@ -147,41 +176,75 @@ export default function StudyPage() {
                             No questions available yet.
                           </p>
                         ) : (
-                          domainCategories.map((cat) => {
-                            const p = progress[cat.name];
-                            const pct = p ? Math.min(100, Math.round((p.attempted / cat.count) * 100)) : 0;
-                            const accuracy = p && p.attempted > 0 ? Math.round((p.correct / p.attempted) * 100) : null;
-                            const accuracyColor = accuracy === null ? MUTED : accuracy >= 75 ? "#4ade80" : accuracy >= 60 ? "#fbbf24" : "#f87171";
+                          (() => {
+                            // Priority: proven-weak categories first (weakest accuracy
+                            // first), then never-attempted ones (need coverage), then
+                            // already-strong ones last (least urgent). This answers
+                            // "which specific topic should I focus on," not just
+                            // "which domain" — a category can be buried inside a
+                            // fine-looking domain average and still be the real problem.
+                            const priority = (cat: { name: string; count: number }) => {
+                              const c = combinedProgress[cat.name];
+                              const acc = c && c.attempted > 0 ? (c.correct / c.attempted) * 100 : null;
+                              if (acc === null) return 1000;
+                              if (acc < 75) return acc;
+                              return 2000 + acc;
+                            };
+                            const sortedCategories = [...domainCategories].sort((a, b) => priority(a) - priority(b));
+                            const topPriority = sortedCategories.length > 0 ? priority(sortedCategories[0]) : Infinity;
+                            const focusHereName = topPriority < 75 ? sortedCategories[0].name : null;
 
-                            return (
-                              <div key={cat.name} className="sp-task" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                  <strong style={{ fontSize: 13 }}>{cat.name}</strong>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    {accuracy !== null && (
-                                      <span style={{ fontSize: 12, fontWeight: 600, color: accuracyColor }}>{accuracy}%</span>
-                                    )}
-                                    {pct > 0 && (
+                            return sortedCategories.map((cat) => {
+                              const p = progress[cat.name];
+                              const c = combinedProgress[cat.name];
+                              const pct = p ? Math.min(100, Math.round((p.attempted / cat.count) * 100)) : 0;
+                              const accuracy = c && c.attempted > 0 ? Math.round((c.correct / c.attempted) * 100) : null;
+                              const accuracyColor = accuracy === null ? MUTED : accuracy >= 75 ? "#4ade80" : accuracy >= 60 ? "#fbbf24" : "#f87171";
+                              const isFocusHere = cat.name === focusHereName;
+
+                              return (
+                                <div key={cat.name} className="sp-task" style={{
+                                  flexDirection: "column", alignItems: "stretch", gap: 8,
+                                  ...(isFocusHere ? { border: "1px solid #f87171", borderRadius: 8, padding: 8 } : {}),
+                                }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <strong style={{ fontSize: 13 }}>{cat.name}</strong>
+                                      {isFocusHere && (
+                                        <span style={{
+                                          fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                                          background: "rgba(248,113,113,0.15)", color: "#f87171",
+                                        }}>
+                                          Focus here
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      {accuracy !== null && (
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: accuracyColor }}>{accuracy}%</span>
+                                      )}
+                                      {pct > 0 && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); resetCategory(cat.name); }}
+                                          title="Reset progress for this category"
+                                          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 6px", fontSize: 11, color: MUTED, cursor: "pointer" }}
+                                        >↺</button>
+                                      )}
                                       <button
-                                        onClick={(e) => { e.stopPropagation(); resetCategory(cat.name); }}
-                                        title="Reset progress for this category"
-                                        style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 6px", fontSize: 11, color: MUTED, cursor: "pointer" }}
-                                      >↺</button>
-                                    )}
-                                    <button
-                                      className="study-btn"
-                                      onClick={() => navigate(`/session/study/${encodeURIComponent(cat.name)}`)}
-                                    >
-                                      {pct > 0 ? "Study Again" : "Study"}
-                                    </button>
+                                        className="study-btn"
+                                        onClick={() => navigate(`/session/study/${encodeURIComponent(cat.name)}`)}
+                                      >
+                                        {pct > 0 ? "Study Again" : "Study"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                                    <div style={{ height: "100%", width: `${pct}%`, background: pct === 100 ? "#4ade80" : "#3b82f6", borderRadius: 999, transition: "width 0.3s" }} />
                                   </div>
                                 </div>
-                                <div style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                                  <div style={{ height: "100%", width: `${pct}%`, background: pct === 100 ? "#4ade80" : "#3b82f6", borderRadius: 999, transition: "width 0.3s" }} />
-                                </div>
-                              </div>
-                            );
-                          })
+                              );
+                            });
+                          })()
                         )}
                       </div>
                     )}
