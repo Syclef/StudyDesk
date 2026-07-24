@@ -424,6 +424,52 @@ app.get("/progress/categories", async (req, reply) => {
   }
 });
 
+// ─── Latest Practice set — per-domain breakdown of a SINGLE most recent
+// Practice attempt (not an all-time aggregate). Used so "Strengths" can say
+// "here's what you did well in your last Practice set" with real context,
+// instead of an ambiguous all-time percentage that could be based on just
+// a handful of questions ever attempted. ────────────────────────────────────
+
+app.get("/progress/latest-practice", async (req, reply) => {
+  try {
+    const latest = await prisma.attempt.findFirst({
+      where: { mode: "PRACTICE", submittedAt: { not: null } },
+      orderBy: { submittedAt: "desc" },
+    });
+    if (!latest) return { mockSlot: null, submittedAt: null, domains: [] };
+
+    const answers = await prisma.attemptAnswer.findMany({
+      where: { attemptId: latest.id, choiceId: { not: null } },
+      select: {
+        questionId: true,
+        choiceId: true,
+        question: { select: { domain: true, choices: { select: { id: true, isCorrect: true } } } },
+      },
+    });
+
+    const stats: Record<string, { attempted: number; correct: number }> = {};
+    for (const a of answers) {
+      const d = a.question.domain;
+      if (!stats[d]) stats[d] = { attempted: 0, correct: 0 };
+      stats[d].attempted += 1;
+      const chosen = a.question.choices.find((c) => c.id === a.choiceId);
+      if (chosen?.isCorrect) stats[d].correct += 1;
+    }
+
+    const domains = Object.entries(stats).map(([domain, s]) => ({
+      domain,
+      attempted: s.attempted,
+      correct: s.correct,
+      acc: s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : null,
+    }));
+
+    return { mockSlot: latest.mockSlot, submittedAt: latest.submittedAt, domains };
+  } catch (err) {
+    req.log.error(err);
+    return reply.internalServerError("Failed to compute latest Practice breakdown");
+  }
+});
+
 // ─── Study streak (consecutive days with any submitted attempt) ────────────
 
 app.get("/progress/streak", async (req, reply) => {

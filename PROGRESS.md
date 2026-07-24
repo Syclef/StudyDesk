@@ -1,6 +1,6 @@
 # CISA Prep — Progress Tracker
 
-Last updated: 2026-07-23 (after commit `2043354`)
+Last updated: 2026-07-24 (after Strengths card + sidebar removal + layout rework)
 
 This file exists so we don't have to reconstruct project history from chat
 scrollback. Update it whenever a feature lands or a decision gets made —
@@ -11,139 +11,204 @@ still an idea."
 
 ## ✅ Done
 
-### Dashboard
-- Current Study Plan — gated behind a one-time 25-question Assessment
-  (5 questions/domain). Hybrid (unstudied-first, then weakest) vs Adaptive
-  (always-weakest) modes, auto-recommended from assessment results,
-  manually overridable. Clicking a domain deep-links into Study, scrolled
-  to and expanded on that section.
-- Focus Areas — split into two columns: Study-only and Practice-only weak
-  domains (untried domains count as weak too, not excluded). Weak
-  threshold = 75% (the real passing rate). Clicking a domain jumps
-  directly into the single weakest *category* inside it (not just the
-  domain), with a "why this section?" context modal showing the real
-  numbers behind the recommendation. Exam's weak domains are intentionally
-  not duplicated here — they live in Overall Readiness's color-coded
-  legend instead.
-- Overall Readiness — Exam-only. Defined as **pass rate over your most
-  recently completed cycle** (one attempt per each of the 5 Exam Sets),
-  not an average and not all-time (both were considered and rejected —
-  see "Key decisions" below). Domain legend beside the ring is
-  color-coded (red/amber/green) so exam-driven weakness is visible even
-  though it's not in a Focus Areas column.
-- Study Streak, Daily Quiz (domain rotates via a date-seeded hash, not
-  simple day-of-year cycling) — unaffected by Flashcards or partial
-  Practice/Exam sessions.
-- Info icons (ⓘ) throughout use a shared `InfoModal` component instead of
-  clipped inline tooltips.
-- Recent Activity card removed (deemed not useful).
-- Fixed-viewport layout (`height: 100vh`, `overflow: hidden`, flex-ratio
-  sections) — no page-level scrolling, ever.
+### Dashboard layout
+- **Sidebar removed entirely.** `DashboardLayout.tsx` no longer renders it.
+  Every non-Dashboard page instead gets a small floating "← Dashboard"
+  button (added once in the shared layout, not per-page). `Sidebar.tsx`
+  itself is now an orphaned file — nothing imports it, safe to delete
+  whenever.
+- Header restructured into 3 stacked pieces: "CISA Prep." branding
+  (centered), then a status bar (greeting + exam countdown on the left,
+  exam date/edit + help/settings on the right), then a centered
+  Practice/Exam/Flashcards nav row. Study is deliberately not in that nav
+  row — it's folded into Current Study Plan itself instead.
+- **No page-level scaling/transform system.** Went through several
+  iterations here (see "Key decisions" below for the full story) — the
+  current, confirmed-working approach is plain `height: 100dvh,
+  overflow: hidden` on the root with flexbox (`flex: 1`, `minHeight: 0`)
+  doing the space-fitting, no `transform: scale()` anywhere. User has
+  directly tested this across all real configurations (laptop maximized
+  and half-screen, ultrawide maximized and half-screen) and confirmed it
+  holds up with no scrollbars, no stacking, no cramping.
+- Current Study Plan's pre-assessment CTA now offers two paths: "Take
+  Assessment" or "I'll Do It Myself" (skips straight to free Study
+  browsing via `navigate("/study")`).
+
+### Overall Readiness
+- Exam-only, still defined as **pass rate over the most recently
+  completed cycle** (see Key decisions).
+- Ring shows **"—" with a "Ready" label** (not "Pass Rate") when no cycle
+  is complete yet, instead of a misleading "0%".
+- Domain legend beside the ring is color-coded (red <60%, amber 60–74%,
+  green 75%+) with a ✓ on passing domains, plus a summary line — "X/5
+  domains passing" — actively highlighting strengths, not just listing
+  numbers passively.
+
+### Focus Areas
+- Two columns, but at **different granularities on purpose**: **Study**
+  shows the weakest individual *categories* across all domains (you study
+  a specific topic, not a whole domain) — no domain badge, just the
+  category name. **Practice** stays *domain*-level (mirrors how the real
+  exam actually scores things).
+- **Untried is excluded entirely from both** — this flipped at least once
+  during development (see Key decisions); current, confirmed-final rule
+  is: only show what's actually been attempted.
+- Clicking a Study category navigates straight into
+  `/session/study/[category]` — no modal, since the row already tells you
+  exactly what you're going to study.
+- Clicking a Practice domain opens a modal with a full breakdown of every
+  attempted category in that domain, split into **"Needs Improvement"
+  (≤50%)** and **"Getting There" (51–74%)** columns — each category row is
+  directly clickable. A column is hidden entirely (not shown empty) if it
+  has no data; if only one column has data it takes the full width.
+- The old single-category "why this section?" modal and its
+  `goToWeakestCategoryInDomain`/`weakAreaPrompt` machinery were fully
+  removed once this breakdown modal replaced it.
+
+### Strengths (new card, sits beside Focus Areas)
+- Same Study/Practice structural split as Focus Areas, inverted to show
+  ≥75% instead of <75%, sorted strongest-first.
+- **Study** = all-time strong categories (same aggregation style as
+  Study's Focus Areas column).
+- **Practice** = domains scoring 75%+ **within the single most recent
+  Practice attempt only** — not an all-time aggregate. This was a
+  deliberate correction: an all-time aggregate could show "100%" based on
+  just 2-3 questions ever attempted, which is misleading. The card shows
+  which specific Practice Set the data is from (e.g. "Based on your last
+  attempt — Practice Set 2"), so there's real context instead of an
+  ambiguous sample size.
+- Rows are informational only — no click action, by design.
 
 ### Study
 - Categories within an expanded domain sort weakest-first, using combined
   Study+Practice+Exam per-category accuracy (`/progress/categories`), with
   a "Focus here" badge on the single genuinely-weak one (if any).
 - Deep-link support (`study_open_domains` / `study_scroll_target` in
-  sessionStorage) so Dashboard links land you in the right place, not just
-  the generic Study page.
+  sessionStorage) so Dashboard links land you in the right place.
 
 ### Practice / Exam
-- Practice counts progressively — an abandoned/partial Practice attempt
-  still contributes its answered questions to domain/category stats
-  (Study and Exam still require full submission).
-- Exam Sets are now correctly attributed by their real `mockSlot`, not by
-  chronological position (this was a real pre-existing bug — see "Bugs
-  fixed" below).
+- Practice counts progressively — an abandoned/partial attempt still
+  contributes its answered questions to domain/category stats (Study and
+  Exam still require full submission).
+- Exam Sets correctly attributed by their real `mockSlot`, not
+  chronological position.
 - Exam cycle tracking (`utils/examCycles.ts`, shared between Dashboard and
-  ExamLandingPage): a cycle = one attempt on each of the 5 distinct Exam
-  Sets. Retaking a set before the cycle completes replaces that set's
-  score for the cycle rather than corrupting or double-counting it.
-  Already-used-this-cycle sets show a badge + soft-lock confirmation
-  before retaking.
+  ExamLandingPage) — cycle = one attempt on each of the 5 distinct Exam
+  Sets, retaking a set before the cycle completes replaces that set's
+  score rather than corrupting the count.
 
 ### API
 - `/progress/domains` and `/progress/domains?mode=X` — combined or
-  mode-scoped per-domain accuracy, using "most recent answer per question"
-  so retakes don't inflate/deflate stats.
-- `/progress/categories` (+ `?mode=X`) — same logic, grouped by category
-  instead of domain.
+  mode-scoped per-domain accuracy, "most recent answer per question" so
+  retakes don't inflate/deflate stats.
+- `/progress/categories` (+ `?mode=X`) — same logic, grouped by category.
+- `/progress/latest-practice` (**new**) — per-domain breakdown of the
+  single most recent *submitted* Practice attempt (not an all-time
+  aggregate). Powers Strengths' Practice column. Orders by `submittedAt`
+  desc; only considers fully submitted attempts (not in-progress ones).
 - `/attempts` includes `mockSlot`.
+- `/progress/streak` still exists but is unused by the frontend (Study
+  Streak feature was built, then removed).
+
+---
+
+## 🐛 Known data issue (not a code bug — flagged, not yet fixed)
+
+- Found via manual inspection: some questions in the **"Cloud and
+  Virtualized Environments"** category are tagged `domain = 'D5'` in the
+  database, but per the user's review of actual question content, that
+  category should only exist under **D4**. This is a question-seeding
+  mistake, not a dashboard bug — the dashboard correctly reports whatever
+  domain/category pairing actually exists in the DB. Fix is a manual SQL
+  `UPDATE` on the affected rows (query provided in chat, not yet run as
+  of this writing). Worth checking whether other categories have the
+  same cross-domain duplication pattern once this one's confirmed fixed.
 
 ---
 
 ## 🟡 Known simplifications (working as intended, not bugs)
 
-- **Flashcards have zero tracking.** No session log, doesn't count toward
-  Streak, not part of Focus Areas. Confirmed fine — it's just a
-  definitions-drilling tool, not meant to feed the readiness system.
+- **Flashcards have zero tracking.** No session log, not part of Focus
+  Areas/Strengths. Confirmed fine — it's a definitions-drilling tool, not
+  meant to feed the readiness system.
 - **Assessment is genuinely one-time, no retake.** Confirmed intentional
-  — user has plans that build on this (see Pending).
+  — user has a concrete follow-up idea that builds on this (see Pending).
 - **Domain weights (18/18/12/26/26%) aren't factored in anywhere yet.**
-  Confirmed this matters specifically for the **Exam module** — that's
-  the whole point of Exam replicating real conditions. Not yet built
-  anywhere (see Pending).
+  Confirmed this matters specifically for the **Exam module**.
 
 ---
 
 ## 🔧 Pending / Next up (in stated priority order)
 
-1. **Practice-column weak-category fix** — clicking a weak domain in the
-   Practice column currently finds the weakest *category* using combined
-   (Study+Practice+Exam) data, not Practice-specific data. Needs its own
-   Practice-scoped category lookup so the "why this section?" modal and
-   the category it sends you to are both honestly Practice-based.
-2. **Sidebar redesign** — open question, possibly removing the sidebar
-   entirely. No direction decided yet.
-3. **Settings page** — gear icon currently only has the theme toggle.
+1. **Settings page** — gear icon currently only has the theme toggle.
    Display name editing was pulled out of the header early on and was
    meant to move here; never built.
-4. **Domain weighting in the Exam module** — apply the real CISA weights
+2. **Domain weighting in the Exam module** — apply the real CISA weights
    (18/18/12/26/26%) somewhere in Exam-specific scoring/readiness logic.
-   Explicitly confirmed as a priority, tied to Exam being the
-   "real conditions" simulator.
-5. **Assessment-related idea (unspecified)** — user has a concrete plan
-   here they haven't detailed yet; flagged as likely "next" once the
-   above settle.
+3. **Assessment-related idea (unspecified)** — user has a concrete plan
+   here they haven't detailed yet.
+4. **Fix the D5/"Cloud and Virtualized Environments" data mistag** (see
+   Known data issue above), then audit for similar cross-domain category
+   name collisions elsewhere in the question bank.
 
 ## 📋 Deferred (explicitly, not forgotten)
 
-- **Mobile/responsive layout** — after desktop is fully polished, one
-  version at a time.
+- **Mobile/responsive layout** — after desktop is fully polished.
 - **Multi-user/production migration** (real accounts replacing the
-  localStorage-based bits: exam date, assessment result, study plan mode,
-  daily quiz) — after everything else is polished.
+  localStorage-based bits) — after everything else is polished.
+- **Sidebar redesign** — resolved by removing it entirely; no longer
+  pending, just noting the decision landed here in case it's revisited.
 
 ---
 
 ## Key decisions worth remembering (so we don't re-litigate them)
 
 - **Overall Readiness = pass rate over last completed cycle**, not an
-  average. Rejected average because two strong attempts can mask three
-  weak ones. Rejected all-time pass rate because early struggling
-  attempts would permanently cap the number even after genuine
-  improvement.
-- **Cycle = 5 distinct Exam Sets**, not "last 5 testing days" (an earlier,
-  now-abandoned version) — chosen because it maps exactly onto the app's
-  real content (there are exactly 5 Exam Sets), making "100%" a genuine,
-  complete claim rather than an arbitrary sample size.
-- **Weak threshold = 75%**, matching the real passing rate everywhere
-  else — not 60%. This was a real bug (mismatch) fixed after confusion
-  about Focus Areas showing "only 3 domains."
-- **Untried domains count as weak**, not excluded. "Unanswered" = 0% =
-  not passing.
-- **This app never claims to predict real ISACA exam results** — Overall
-  Readiness's info modal explicitly disclaims this. It measures
-  consistency on this app's own mock exams only.
+  average, not all-time. See prior reasoning — still holds.
+- **Weak threshold = 75%**, matching the real passing rate everywhere.
+- **Untried counts as weak in Focus Areas... then this reversed.** Early
+  on, untried was deliberately included as "weak" (unanswered = 0% = not
+  passing). Later, explicitly reversed: Focus Areas and Strengths now
+  both **exclude untried entirely** — only show what's actually been
+  attempted. If this comes up again, the *current* rule is exclude,
+  confirmed twice now.
+- **Focus Areas' Study/Practice split uses different granularities on
+  purpose** — Study = category-level (what you actually study), Practice
+  = domain-level (mirrors real exam scoring). This was also confirmed
+  explicitly, don't "fix" it toward matching granularities.
+- **The page-scaling story, condensed**: tried (1) transform-scale
+  shrink-only capped at 1x + centering on wide screens — worked, but
+  "why can't it grow on wide screens too" led to (2) allowing scale-up,
+  which mathematically breaks (dividing pre-scale height by a
+  scaleFactor > 1 gives *less* virtual room, squeezing every card and
+  causing individual scrollbars) — reverted. Then pushed toward genuine
+  CSS breakpoint reflow (stacking columns at narrow widths, allowing
+  page scroll) as "how real websites do it" — user rejected this
+  outright: explicitly does not want stacking or scrolling, wants one
+  fixed layout at every size. Went back to shrink-only transform-scale.
+  Then Gemini (a different assistant) rewrote it using a **different,
+  simpler mechanism that the transform-scale approach never used**:
+  dual-axis scaling — `Math.min(scaleX, scaleY)` where both axes are
+  computed against a fixed design width *and height* — plus fixed-px
+  card padding instead of `clamp(vh/vw)` (which was double-shrinking
+  under the transform). That version worked well. **Current version**
+  (this update) removes even that — no transform at all, pure flexbox
+  (`flex: 1`, `minHeight: 0` throughout, `overflow: hidden` per card).
+  User has directly tested this across all real configurations and
+  confirmed it holds. If layout bugs resurface at some specific window
+  size, this history is the place to look before re-inventing a fix.
+- **This app never claims to predict real ISACA exam results.**
 
 ---
 
-## File map (touched this session)
+## File map (touched across recent sessions)
 
 ```
-api/src/server.ts
+api/src/server.ts                                 (latest-practice endpoint added)
+frontend/src/layout/DashboardLayout.tsx            (sidebar removed, back-button added)
+frontend/src/layout/Sidebar.tsx                    (orphaned — nothing imports it)
 frontend/src/pages/Dashboard/Dashboard.tsx
-frontend/src/pages/Dashboard/InfoModal.tsx        (new)
+frontend/src/pages/Dashboard/InfoModal.tsx
 frontend/src/pages/Dashboard/DailyQuizModal.tsx
 frontend/src/pages/Dashboard/AssessmentQuizModal.tsx
 frontend/src/pages/Dashboard/HelpModal.tsx
@@ -152,6 +217,5 @@ frontend/src/pages/Exam/examUtils.ts
 frontend/src/pages/Study/StudyPage.tsx
 frontend/src/pages/Practice/PracticeCategories.tsx
 frontend/src/pages/Practice/PracticeSessionPage.tsx
-frontend/src/utils/examCycles.ts                  (new)
-frontend/src/layout/Sidebar.tsx
+frontend/src/utils/examCycles.ts
 ```
