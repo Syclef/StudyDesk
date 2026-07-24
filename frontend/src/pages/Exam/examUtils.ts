@@ -1,11 +1,8 @@
 import { fetchQuestions } from "../../api/questions";
 import { ExamMode, ExamQuestion, ExamSession } from "./examTypes";
+import { CISA_DOMAIN_WEIGHTS } from "../../utils/cisaWeights";
 
 const API_BASE = "http://127.0.0.1:4000";
-
-const CISA_WEIGHTS: Record<string, number> = {
-  D1: 0.21, D2: 0.17, D3: 0.12, D4: 0.23, D5: 0.27,
-};
 
 const DOMAIN_MAP: Record<number, string> = {
   1: "D1", 2: "D2", 3: "D3", 4: "D4", 5: "D5",
@@ -35,7 +32,7 @@ function buildWeightedSelection(
   }
 
   const selected: typeof allQuestions = [];
-  for (const [domain, weight] of Object.entries(CISA_WEIGHTS)) {
+  for (const [domain, weight] of Object.entries(CISA_DOMAIN_WEIGHTS)) {
     const target = Math.round(totalCount * weight);
     const pool = byDomain[domain] ?? [];
     selected.push(...pickRandom(pool, Math.min(target, pool.length)));

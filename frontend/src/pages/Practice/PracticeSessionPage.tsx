@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/practice-session.css";
+import { CISA_DOMAIN_WEIGHTS } from "../../utils/cisaWeights";
 
 type Phase = "loading" | "error" | "active" | "checked" | "results";
 
@@ -27,15 +28,6 @@ interface Answer {
 }
 
 const API_BASE = "http://127.0.0.1:4000";
-
-// CISA domain weights
-const CISA_WEIGHTS: Record<string, number> = {
-  D1: 0.21,
-  D2: 0.17,
-  D3: 0.12,
-  D4: 0.23,
-  D5: 0.27,
-};
 
 const TOTAL = 150;
 
@@ -95,7 +87,7 @@ function buildWeightedSet(all: Question[]): Question[] {
   }
 
   const selected: Question[] = [];
-  for (const [domain, weight] of Object.entries(CISA_WEIGHTS)) {
+  for (const [domain, weight] of Object.entries(CISA_DOMAIN_WEIGHTS)) {
     const target = Math.round(TOTAL * weight);
     const pool = shuffle(byDomain[domain] ?? []);
     selected.push(...pool.slice(0, Math.min(target, pool.length)));
