@@ -1,6 +1,6 @@
 # CISA Prep — Progress Tracker
 
-Last updated: 2026-07-24 (after Strengths card + sidebar removal + layout rework)
+Last updated: 2026-07-24 (after CISA domain weight fix)
 
 This file exists so we don't have to reconstruct project history from chat
 scrollback. Update it whenever a feature lands or a decision gets made —
@@ -96,6 +96,15 @@ still an idea."
   ExamLandingPage) — cycle = one attempt on each of the 5 distinct Exam
   Sets, retaking a set before the cycle completes replaces that set's
   score rather than corrupting the count.
+- **CISA domain weighting fixed and centralized.** Was already
+  implemented for both the 5 Exam Sets and 5 Practice Sets, but both
+  independently used an old, superseded weight set (D1:21%, D2:17%,
+  D3:12%, D4:23%, D5:27%) instead of the corrected official weights
+  (D1:18%, D2:18%, D3:12%, D4:26%, D5:26%). Fixed and moved into
+  `frontend/src/utils/cisaWeights.ts` (`CISA_DOMAIN_WEIGHTS`) — a single
+  shared constant imported by `examUtils.ts` and
+  `PracticeSessionPage.tsx`, instead of two independently-declared
+  copies (which is exactly how they drifted out of sync originally).
 
 ### API
 - `/progress/domains` and `/progress/domains?mode=X` — combined or
@@ -133,8 +142,6 @@ still an idea."
   meant to feed the readiness system.
 - **Assessment is genuinely one-time, no retake.** Confirmed intentional
   — user has a concrete follow-up idea that builds on this (see Pending).
-- **Domain weights (18/18/12/26/26%) aren't factored in anywhere yet.**
-  Confirmed this matters specifically for the **Exam module**.
 
 ---
 
@@ -143,11 +150,9 @@ still an idea."
 1. **Settings page** — gear icon currently only has the theme toggle.
    Display name editing was pulled out of the header early on and was
    meant to move here; never built.
-2. **Domain weighting in the Exam module** — apply the real CISA weights
-   (18/18/12/26/26%) somewhere in Exam-specific scoring/readiness logic.
-3. **Assessment-related idea (unspecified)** — user has a concrete plan
+2. **Assessment-related idea (unspecified)** — user has a concrete plan
    here they haven't detailed yet.
-4. **Fix the D5/"Cloud and Virtualized Environments" data mistag** (see
+3. **Fix the D5/"Cloud and Virtualized Environments" data mistag** (see
    Known data issue above), then audit for similar cross-domain category
    name collisions elsewhere in the question bank.
 
