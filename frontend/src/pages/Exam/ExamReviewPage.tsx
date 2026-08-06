@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadAttemptDraft } from "./examStorage";
+import { useTheme } from "../../utils/theme";
 import type { ExamAttempt, ExamQuestion } from "./examTypes";
 
-// Theme-aware colors (matches macOS light/dark)
-function getTheme() {
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+// Theme-aware colors (matches macOS light/dark). Driven by the app's
+// ThemeProvider (useTheme) rather than reading the DOM directly, so this
+// re-renders correctly when the user toggles the theme without a full reload.
+function getTheme(mode: "light" | "dark") {
+  const isDark = mode === "dark";
   return {
     BG: isDark ? "#1c1c1e" : "#f5f5f7",
     CARD: isDark ? "#2c2c2e" : "#ffffff",
@@ -16,18 +19,14 @@ function getTheme() {
     SUCCESS: isDark ? "#32d74b" : "#34c759",
     DANGER: isDark ? "#ff453a" : "#ff3b30",
     WARNING: isDark ? "#ff9f0a" : "#ff9500",
+    ON_ACCENT: "#fff",
+    OVERLAY_TRACK: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+    OVERLAY_SUBTLE: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+    OVERLAY_EXPLAIN: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+    OVERLAY_CHOICE: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+    OVERLAY_DISABLED_TEXT: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.25)",
   };
 }
-
-const BG = "#1c1c1e";
-const CARD = "#2c2c2e";
-const TEXT = "#f5f5f7";
-const MUTED = "#98989d";
-const BORDER = "rgba(255,255,255,0.08)";
-const ACCENT = "#0a84ff";
-const SUCCESS = "#32d74b";
-const DANGER = "#ff453a";
-const WARNING = "#ff9f0a";
 
 function renderQuestionText(text: string): React.ReactNode {
   if (!text.includes('\n')) return <span>{text}</span>;
@@ -51,6 +50,10 @@ function renderQuestionText(text: string): React.ReactNode {
 
 export default function ExamReviewPage() {
   const navigate = useNavigate();
+  const { mode } = useTheme();
+  const { BG, CARD, TEXT, MUTED, BORDER, ACCENT, SUCCESS, DANGER, WARNING,
+    ON_ACCENT, OVERLAY_TRACK, OVERLAY_SUBTLE, OVERLAY_EXPLAIN, OVERLAY_CHOICE,
+    OVERLAY_DISABLED_TEXT } = getTheme(mode);
   const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
   const [index, setIndex] = useState(0);
 
@@ -115,7 +118,7 @@ export default function ExamReviewPage() {
             const isSelected = c.id === userChoiceId;
             const isCorrectChoice = c.id === q.correctChoiceId;
 
-            let bg = "rgba(255,255,255,0.04)";
+            let bg = OVERLAY_SUBTLE;
             let border = BORDER;
             let color = MUTED;
 
@@ -142,7 +145,7 @@ export default function ExamReviewPage() {
 
         {/* Explanation */}
         {q.explanation && (
-          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 8, background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}`, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 8, background: OVERLAY_EXPLAIN, border: `1px solid ${BORDER}`, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
             <span style={{ color: TEXT }}>Explanation:</span> {q.explanation}
           </div>
         )}
@@ -153,13 +156,13 @@ export default function ExamReviewPage() {
         <button
           onClick={() => setIndex(i => Math.max(0, i - 1))}
           disabled={index === 0}
-          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 18px", color: index === 0 ? "rgba(255,255,255,0.2)" : TEXT, cursor: index === 0 ? "not-allowed" : "pointer", fontSize: 13 }}
+          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 18px", color: index === 0 ? OVERLAY_DISABLED_TEXT : TEXT, cursor: index === 0 ? "not-allowed" : "pointer", fontSize: 13 }}
         >‹ Prev</button>
 
         <button
           onClick={() => setIndex(i => Math.min(total - 1, i + 1))}
           disabled={index === total - 1}
-          style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "8px 18px", color: "#fff", cursor: index === total - 1 ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, opacity: index === total - 1 ? 0.4 : 1 }}
+          style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "8px 18px", color: ON_ACCENT, cursor: index === total - 1 ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, opacity: index === total - 1 ? 0.4 : 1 }}
         >Next ›</button>
       </div>
 
@@ -174,7 +177,7 @@ export default function ExamReviewPage() {
             const isFl = !!attempt.flagged[qq.id];
             const isCurrent = i === index;
 
-            let bg = "rgba(255,255,255,0.06)";
+            let bg = OVERLAY_CHOICE;
             let border = BORDER;
             if (isAnswered && isRight) { bg = "rgba(74,222,128,0.15)"; border = SUCCESS; }
             if (isAnswered && !isRight) { bg = "rgba(248,113,113,0.15)"; border = DANGER; }

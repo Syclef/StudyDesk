@@ -1,17 +1,48 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { recordStudyResult } from "../../utils/studyProgress";
+import { useTheme } from "../../utils/theme";
 
 const API_BASE = "http://127.0.0.1:4000";
 
-const BG = "#0f1b2d";
-const CARD = "#1a2540";
-const TEXT = "#e5eaf1";
-const MUTED = "#94a3b8";
-const BORDER = "rgba(255,255,255,0.10)";
-const ACCENT = "#3b82f6";
-const SUCCESS = "#4ade80";
-const DANGER = "#f87171";
+const PALETTES = {
+  dark: {
+    BG: "#0f1b2d",
+    CARD: "#1a2540",
+    TEXT: "#e5eaf1",
+    MUTED: "#94a3b8",
+    BORDER: "rgba(255,255,255,0.10)",
+    ACCENT: "#3b82f6",
+    SUCCESS: "#4ade80",
+    DANGER: "#f87171",
+    OVERLAY_SUBTLE: "rgba(255,255,255,0.04)",
+    OVERLAY_TRACK: "rgba(255,255,255,0.08)",
+    OVERLAY_DISABLED: "rgba(255,255,255,0.08)",
+    OVERLAY_EXPLAIN: "rgba(255,255,255,0.03)",
+    OVERLAY_SELECTED: "rgba(59,130,246,0.15)",
+    OVERLAY_CORRECT: "rgba(74,222,128,0.12)",
+    OVERLAY_INCORRECT: "rgba(248,113,113,0.12)",
+    ON_ACCENT: "#fff",
+  },
+  light: {
+    BG: "#f8fafc",
+    CARD: "#ffffff",
+    TEXT: "#1e293b",
+    MUTED: "#64748b",
+    BORDER: "rgba(15,23,42,0.12)",
+    ACCENT: "#2563eb",
+    SUCCESS: "#16a34a",
+    DANGER: "#dc2626",
+    OVERLAY_SUBTLE: "rgba(15,23,42,0.03)",
+    OVERLAY_TRACK: "rgba(15,23,42,0.08)",
+    OVERLAY_DISABLED: "rgba(15,23,42,0.06)",
+    OVERLAY_EXPLAIN: "rgba(15,23,42,0.02)",
+    OVERLAY_SELECTED: "rgba(37,99,235,0.10)",
+    OVERLAY_CORRECT: "rgba(22,163,74,0.10)",
+    OVERLAY_INCORRECT: "rgba(220,38,38,0.10)",
+    ON_ACCENT: "#fff",
+  },
+} as const;
 
 // Renders question text with bullet formatting for scenario-type questions
 function renderQuestionText(text: string, color: string): React.ReactNode {
@@ -69,6 +100,10 @@ interface SessionState {
 const SimulatorPage = () => {
   const { id } = useParams<{ mode: string; id: string }>();
   const navigate = useNavigate();
+  const { mode: themeMode } = useTheme();
+  const { BG, CARD, TEXT, MUTED, BORDER, ACCENT, SUCCESS, DANGER,
+    OVERLAY_SUBTLE, OVERLAY_TRACK, OVERLAY_DISABLED, OVERLAY_EXPLAIN,
+    OVERLAY_SELECTED, OVERLAY_CORRECT, OVERLAY_INCORRECT, ON_ACCENT } = PALETTES[themeMode];
 
   const [session, setSession] = useState<SessionState | null>(null);
   const [idx, setIdx] = useState(0);
@@ -195,7 +230,7 @@ const SimulatorPage = () => {
 
       {/* Progress */}
       <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>Question {idx + 1} of {session.total}</div>
-      <div style={{ width: "100%", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", marginBottom: 20, overflow: "hidden" }}>
+      <div style={{ width: "100%", height: 6, borderRadius: 999, background: OVERLAY_TRACK, marginBottom: 20, overflow: "hidden" }}>
         <div ref={progressFillRef} style={{ height: "100%", background: ACCENT, borderRadius: 999, width: "0%", transition: "width 0.2s" }} />
       </div>
 
@@ -222,16 +257,16 @@ const SimulatorPage = () => {
             const isSelected = selectedOption === choice.label;
             const isCorrectChoice = choice.isCorrect;
 
-            let bg = "rgba(255,255,255,0.04)";
+            let bg = OVERLAY_SUBTLE;
             let border = BORDER;
             let color = TEXT;
 
             if (showExplanation) {
-              if (isCorrectChoice) { bg = "rgba(74,222,128,0.12)"; border = SUCCESS; }
-              else if (isSelected) { bg = "rgba(248,113,113,0.12)"; border = DANGER; }
+              if (isCorrectChoice) { bg = OVERLAY_CORRECT; border = SUCCESS; }
+              else if (isSelected) { bg = OVERLAY_INCORRECT; border = DANGER; }
               else { color = MUTED; }
             } else if (isSelected) {
-              bg = "rgba(59,130,246,0.15)";
+              bg = OVERLAY_SELECTED;
               border = ACCENT;
             }
 
@@ -267,7 +302,7 @@ const SimulatorPage = () => {
                 {hasJustification && (
                   <div style={{
                     padding: "10px 16px",
-                    background: "rgba(255,255,255,0.03)",
+                    background: OVERLAY_EXPLAIN,
                     border: `1px solid ${border}`,
                     borderTop: "none",
                     borderRadius: "0 0 8px 8px",
@@ -296,17 +331,17 @@ const SimulatorPage = () => {
             disabled={!selectedOption}
             onClick={handleCheckAnswer}
             style={{
-              background: selectedOption ? ACCENT : "rgba(255,255,255,0.08)",
+              background: selectedOption ? ACCENT : OVERLAY_DISABLED,
               border: "none", borderRadius: 8, padding: "10px 28px",
               fontSize: 14, fontWeight: 600,
-              color: selectedOption ? "#fff" : MUTED,
+              color: selectedOption ? ON_ACCENT : MUTED,
               cursor: selectedOption ? "pointer" : "not-allowed",
             }}
           >Check Answer</button>
         ) : (
           <button
             onClick={handleNext}
-            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" }}
+            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 600, color: ON_ACCENT, cursor: "pointer" }}
           >{idx + 1 < session.total ? "Next Question" : "Finish"}</button>
         )}
       </div>

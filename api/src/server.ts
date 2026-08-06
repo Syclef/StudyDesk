@@ -11,6 +11,19 @@ import { questionsRoutes } from "./routes/questions.js";
 const app = Fastify({ logger: true });
 const prisma = new PrismaClient();
 
+// Fisher-Yates shuffle — matches the pattern used in frontend examUtils.ts /
+// PracticeSessionPage.tsx. Array.prototype.sort(() => Math.random() - 0.5) is
+// not a uniform shuffle (biased by the engine's sort implementation), so this
+// is used anywhere question order needs to be randomized.
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 await app.register(cors, { origin: true });
 await app.register(sensible);
 await app.register(questionsRoutes);
@@ -118,7 +131,7 @@ app.post("/attempts", async (req, reply) => {
     include: { choices: { orderBy: { label: "asc" } } },
   });
   if (questions.length === 0) return reply.badRequest("No questions found");
-  const shuffled = questions.sort(() => Math.random() - 0.5);
+  const shuffled = shuffle(questions);
   selected = questionCount ? shuffled.slice(0, questionCount) : shuffled;
 }
 

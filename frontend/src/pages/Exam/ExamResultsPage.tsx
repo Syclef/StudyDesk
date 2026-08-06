@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadAttemptDraft } from "./examStorage";
+import { useTheme } from "../../utils/theme";
 import type { ExamAttempt } from "./examTypes";
 
-// Theme-aware colors (matches macOS light/dark)
-function getTheme() {
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+// Theme-aware colors (matches macOS light/dark). Driven by the app's
+// ThemeProvider (useTheme) rather than reading the DOM directly, so this
+// re-renders correctly when the user toggles the theme without a full reload.
+function getTheme(mode: "light" | "dark") {
+  const isDark = mode === "dark";
   return {
     BG: isDark ? "#1c1c1e" : "#f5f5f7",
     CARD: isDark ? "#2c2c2e" : "#ffffff",
@@ -16,18 +19,14 @@ function getTheme() {
     SUCCESS: isDark ? "#32d74b" : "#34c759",
     DANGER: isDark ? "#ff453a" : "#ff3b30",
     WARNING: isDark ? "#ff9f0a" : "#ff9500",
+    ON_ACCENT: "#fff",
+    OVERLAY_TRACK: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+    OVERLAY_SUBTLE: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+    OVERLAY_EXPLAIN: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+    OVERLAY_CHOICE: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+    OVERLAY_DISABLED_TEXT: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.25)",
   };
 }
-
-const BG = "#1c1c1e";
-const CARD = "#2c2c2e";
-const TEXT = "#f5f5f7";
-const MUTED = "#98989d";
-const BORDER = "rgba(255,255,255,0.08)";
-const ACCENT = "#0a84ff";
-const SUCCESS = "#32d74b";
-const DANGER = "#ff453a";
-const WARNING = "#ff9f0a";
 
 const DOMAIN_NAMES: Record<string, string> = {
   D1: "Information System Auditing Process",
@@ -39,6 +38,9 @@ const DOMAIN_NAMES: Record<string, string> = {
 
 export default function ExamResultsPage() {
   const navigate = useNavigate();
+  const { mode } = useTheme();
+  const { BG, CARD, TEXT, MUTED, BORDER, ACCENT, SUCCESS, DANGER, WARNING,
+    ON_ACCENT, OVERLAY_TRACK, OVERLAY_SUBTLE } = getTheme(mode);
   const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
 
   useEffect(() => {
@@ -128,7 +130,7 @@ export default function ExamResultsPage() {
                 <span style={{ color: TEXT }}>{DOMAIN_NAMES[domain] ?? domain}</span>
                 <span style={{ color: barColor, fontWeight: 700 }}>{pct}% ({ds.correct}/{ds.total})</span>
               </div>
-              <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+              <div style={{ height: 8, borderRadius: 999, background: OVERLAY_TRACK, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 999, transition: "width 0.4s" }} />
               </div>
             </div>
@@ -137,7 +139,7 @@ export default function ExamResultsPage() {
       </div>
 
       {/* Passing threshold note */}
-      <div style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: MUTED }}>
+      <div style={{ background: OVERLAY_SUBTLE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: MUTED }}>
         <span style={{ color: SUCCESS, fontWeight: 700 }}>■</span> Pass ≥75% &nbsp;
         <span style={{ color: WARNING, fontWeight: 700 }}>■</span> Borderline 60–74% &nbsp;
         <span style={{ color: DANGER, fontWeight: 700 }}>■</span> Fail &lt;60%
@@ -147,7 +149,7 @@ export default function ExamResultsPage() {
       <div style={{ display: "flex", gap: 12 }}>
         <button
           onClick={() => navigate("/exam/review")}
-          style={{ background: ACCENT, color: "#fff", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+          style={{ background: ACCENT, color: ON_ACCENT, border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
         >Review Answers</button>
         <button
           onClick={() => navigate("/exam")}

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ExamAttempt, ExamQuestion, ExamSession, ExamUserAnswer } from "./examTypes";
 import { buildExamSession, calcRemainingSeconds } from "./examUtils";
 import { saveAttemptDraft, saveLastAttemptId } from "../../utils/examStorage";
+import { useTheme } from "../../utils/theme";
 
 const API_BASE = "http://127.0.0.1:4000";
 
@@ -16,14 +17,24 @@ type LocationState = {
 
 type Phase = "loading" | "taking" | "review" | "submitting";
 
-const BG = "#0f1b2d";
-const CARD = "#1a2540";
-const TEXT = "#e5eaf1";
-const MUTED = "#94a3b8";
-const BORDER = "rgba(255,255,255,0.10)";
-const ACCENT = "#3b82f6";
-const DANGER = "#f87171";
-const WARNING = "#fbbf24";
+function getTheme(mode: "light" | "dark") {
+  const isDark = mode === "dark";
+  return {
+    BG: isDark ? "#0f1b2d" : "#f8fafc",
+    CARD: isDark ? "#1a2540" : "#ffffff",
+    TEXT: isDark ? "#e5eaf1" : "#1e293b",
+    MUTED: isDark ? "#94a3b8" : "#64748b",
+    BORDER: isDark ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+    ACCENT: isDark ? "#3b82f6" : "#2563eb",
+    DANGER: isDark ? "#f87171" : "#dc2626",
+    WARNING: isDark ? "#fbbf24" : "#d97706",
+    ON_ACCENT: "#fff",
+    OVERLAY_TRACK: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.06)",
+    OVERLAY_CHOICE: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.03)",
+    OVERLAY_SELECTED: isDark ? "rgba(59,130,246,0.15)" : "rgba(37,99,235,0.10)",
+    OVERLAY_DISABLED_TEXT: isDark ? "rgba(255,255,255,0.25)" : "rgba(15,23,42,0.25)",
+  };
+}
 
 function renderQuestionText(text: string, color: string): React.ReactNode {
   if (!text.includes('\n')) return <span style={{ color }}>{text}</span>;
@@ -49,6 +60,10 @@ export default function ExamTakePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state || {}) as LocationState;
+  const { mode: themeMode } = useTheme();
+  const { BG, CARD, TEXT, MUTED, BORDER, ACCENT, DANGER, WARNING,
+    ON_ACCENT, OVERLAY_TRACK, OVERLAY_CHOICE, OVERLAY_SELECTED,
+    OVERLAY_DISABLED_TEXT } = getTheme(themeMode);
 
   const mode = state.mode ?? "full";
   const domains = state.domains ?? [1, 2, 3, 4, 5];
@@ -228,7 +243,7 @@ export default function ExamTakePage() {
 
         <div style={{ display: "flex", gap: 12 }}>
           <button onClick={() => finalSubmit(false)}
-            style={{ background: DANGER, color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            style={{ background: DANGER, color: ON_ACCENT, border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             Confirm Submit
           </button>
           <button onClick={() => setPhase("taking")}
@@ -255,7 +270,7 @@ export default function ExamTakePage() {
       <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>
         Question {idx + 1} of {totalQ} · Answered: {answeredCount}
       </div>
-      <div style={{ width: "100%", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", marginBottom: 20, overflow: "hidden" }}>
+      <div style={{ width: "100%", height: 6, borderRadius: 999, background: OVERLAY_TRACK, marginBottom: 20, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${((idx + 1) / totalQ) * 100}%`, background: ACCENT, borderRadius: 999, transition: "width 0.2s" }} />
       </div>
 
@@ -278,7 +293,7 @@ export default function ExamTakePage() {
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "14px 16px", borderRadius: 8,
                   border: `1px solid ${isSelected ? ACCENT : BORDER}`,
-                  background: isSelected ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.04)",
+                  background: isSelected ? OVERLAY_SELECTED : OVERLAY_CHOICE,
                   color: TEXT, cursor: "pointer", transition: "all 0.15s",
                 }}>
                 <span style={{ fontWeight: 700, width: 20, flexShrink: 0 }}>{c.label}</span>
@@ -291,7 +306,7 @@ export default function ExamTakePage() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button onClick={() => goTo(idx - 1)} disabled={idx === 0}
-          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 20px", fontSize: 13, color: idx === 0 ? "rgba(255,255,255,0.25)" : MUTED, cursor: idx === 0 ? "not-allowed" : "pointer" }}>
+          style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 20px", fontSize: 13, color: idx === 0 ? OVERLAY_DISABLED_TEXT : MUTED, cursor: idx === 0 ? "not-allowed" : "pointer" }}>
           ‹ Prev
         </button>
 
@@ -307,12 +322,12 @@ export default function ExamTakePage() {
 
         {isLast ? (
           <button onClick={() => setPhase("review")}
-            style={{ background: DANGER, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+            style={{ background: DANGER, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: ON_ACCENT, cursor: "pointer" }}>
             Review Exam ›
           </button>
         ) : (
           <button onClick={() => goTo(idx + 1)}
-            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+            style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, color: ON_ACCENT, cursor: "pointer" }}>
             Next ›
           </button>
         )}
