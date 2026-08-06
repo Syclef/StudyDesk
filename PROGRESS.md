@@ -1,6 +1,6 @@
 # CISA Prep — Progress Tracker
 
-Last updated: 2026-07-24 (after CISA domain weight fix)
+Last updated: 2026-08-06 (after question data integrity audit, theme fixes, shuffle fix)
 
 This file exists so we don't have to reconstruct project history from chat
 scrollback. Update it whenever a feature lands or a decision gets made —
@@ -119,21 +119,140 @@ still an idea."
 - `/progress/streak` still exists but is unused by the frontend (Study
   Streak feature was built, then removed).
 
----
+### Question bank data integrity (2026-08-06 session)
+- **ISACA Perform copy script built and iterated (`isaca-clean-copy.js`)** —
+  Tampermonkey userscript that copies a question's full content (text,
+  choices, correct answer, justification, Domain/Knowledge
+  Statement/Task Statement) directly from the DOM instead of
+  `innerText`-scraping. Went through several bug fixes along the way:
+  - Original innerText-based approach could silently truncate on
+    questions whose text contained the words "Incorrect" or "Correct
+    answer is" (used as footer-clip markers) — replaced with structural
+    DOM selectors instead.
+  - Discovered the page renders **two** `.question-container` elements
+    once you answer a question (a stale empty `display:none` one, plus
+    the real one with `#answer`) — script was grabbing the wrong one.
+    Fixed by preferring the container that actually has `#answer`.
+  - Script output format was iterated to match the exact plain-text
+    format of the original Word docs (`X of Y` / `Question: ...` /
+    lettered choices / `Justification` / `Domain`/`Knowledge
+    Statement`/`Task Statement`), so copied questions can be pasted
+    straight into a Word doc and run through the existing
+    `parse_questions.py` pipeline with no reformatting.
+- **`parse_questions.py` updated** to handle the copy script's output:
+  strips optional `A.`/`B.`/`C.`/`D.` labels from justification
+  paragraphs (added for readability when pasted into Word) before
+  storing, and accepts both the old bare `Question` label and the new
+  inline `Question: xxx` format. Fully backward-compatible with the
+  original 5 source Word docs (verified via test parse, no
+  regressions).
+- **Fixed real data corruption: D1-116.** A parser merge glitch had
+  fused choices A and B into one garbled entry, dropping choice B's
+  text and justification entirely. Confirmed and fixed against the live
+  ISACA Perform question.
+- **Investigated and resolved the "Cloud and Virtualized Environments"
+  domain question** (see old entry below, now closed) — confirmed via
+  ISACA's own official course outline that this category legitimately
+  belongs under **D5**, not D4. The original D1–D5 source Word docs were
+  actually named by **list position** in ISACA Perform's UI (which
+  displays categories in the non-numeric order D1, D2, D4, D5, D3), not
+  by real domain number — this caused the on-disk filenames
+  (`domain3.json` etc.) to not match their actual content. Files
+  renamed to reflect true contents (`domain3.json` → actually D4 →
+  renamed `domain4_raw.json`, etc.); the merged `questions.json` itself
+  was never affected since `merge_questions.py` reads the internal
+  `code` field, not the filename.
+- **Found and fixed a genuine duplicate: D5-836.** Two entries existed
+  for the same "shared user accounts" IAM question stem with different
+  correct answers (C vs. D) and different Task Statements. Live
+  re-verification against ISACA Perform (copying through the full
+  40-question IAM category) confirmed only one is real; the other was
+  an artifact from the original scrape. Removed, then — important
+  correction — **re-confirmed via the category's own "40 of 40" total on
+  ISACA Perform** that 40 is correct and the question needed to stay;
+  restored it. (Earlier in this same investigation, a partial
+  session-review count of "39 of 39" was mistakenly treated as the true
+  category total — it was only counting that session's answered
+  questions, not the full pool. Lesson: only the category-listing page's
+  own count is authoritative for "how many total questions exist," not
+  a review-session count.)
+- **Full category/domain reconciliation completed.** Cross-checked
+  every one of the 1,072 questions' domain+category assignment against
+  ISACA Perform's own category-listing screenshots (all 5 domains, 60
+  categories total). Found and fixed:
+  - ~15 categories fragmented across multiple near-duplicate JSON
+    groups (inconsistent category-name strings from parsing
+    quirks/non-breaking spaces/leading dashes) — merged into canonical
+    names.
+  - 2 individual D1 questions in the wrong category (content-based
+    fix, confirmed by the count imbalance resolving cleanly).
+  - 1 individual D3 question in the wrong category.
+  - D4 was the messiest: 4 individual misfiled questions (identified
+    via `externalId` sequence breaks — e.g. an ID like `D4-605` sitting
+    inside a group otherwise numbered `D4-357`–`D4-368` — combined with
+    content matching) plus **7 questions with a completely blank
+    category** (their `taskId` had also failed to parse, defaulting to
+    `T0` — a full metadata-parse failure on whatever source file they
+    came from). All 7 were assigned to "Problem and Incident
+    Management" based on a strong arithmetic signal (that category was
+    short exactly 7, matching the blank count exactly) plus content
+    review.
+  - **Result: all 60 categories across all 5 domains now match ISACA
+    Perform exactly** (verified via comparison table, all ✅). Total
+    question count: **1,072** (unchanged from before — this was a
+    reclassification exercise, not additions/removals, aside from the
+    single D1-116 repair).
+  - ⚠️ **Caveat worth flagging**: the D4 fixes (blank-category
+    questions especially) were resolved via content inference + count
+    arithmetic, not a live re-check against ISACA Perform like the
+    D5-836 case got. Confidence is high but not verified the same way —
+    worth a spot-check if time allows.
+- **Fixed a data-seeding bug causing duplicate questions in the DB**
+  (discovered via IAM showing 80 questions in-app instead of 40).
+  Root cause: `seed.ts` upserts on `legacyId` (= `externalId` from
+  `merge_questions.py`), but `externalId` is a **global sequential
+  counter** dependent on the order `merge_questions.py` processes
+  files — renaming the domain source files (to fix the naming
+  confusion above) shifted that order, so re-seeding with new
+  `externalId`s created a second copy of everything instead of updating
+  the first. Fixed by truncating `Choice`/`AttemptAnswer`/
+  `AttemptQuestion`/`Question` and reseeding clean. **Note for future
+  reference**: `legacyId`/`externalId` is not a stable identifier across
+  file-order changes — if the source `.json` files are ever renamed or
+  reordered again, expect the same duplication risk unless
+  `merge_questions.py`'s numbering scheme is made stable (e.g. derived
+  from ISACA's own `legacyId` captured by the copy script, or a content
+  hash) instead of positional.
 
-## 🐛 Known data issue (not a code bug — flagged, not yet fixed)
+### Randomization fix
+- **Study/Practice/Exam question shuffling used a biased shuffle.**
+  `api/src/server.ts`'s `/attempts` endpoint used
+  `questions.sort(() => Math.random() - 0.5)`, which is a well-known
+  non-uniform shuffle (biased by the sort algorithm's comparison
+  pattern). Replaced with a proper Fisher-Yates shuffle — the same
+  pattern already correctly used in `examUtils.ts` and
+  `PracticeSessionPage.tsx` — now defined once in `server.ts` and
+  reused. (Confirmed via testing that Study mode *is* randomized on
+  each new session/attempt — this was a correctness fix, not a
+  "it wasn't randomized at all" fix.)
 
-- Found via manual inspection: some questions in the **"Cloud and
-  Virtualized Environments"** category are tagged `domain = 'D5'` in the
-  database, but per the user's review of actual question content, that
-  category should only exist under **D4**. This is a question-seeding
-  mistake, not a dashboard bug — the dashboard correctly reports whatever
-  domain/category pairing actually exists in the DB. Fix is a manual SQL
-  `UPDATE` on the affected rows (query provided in chat, not yet run as
-  of this writing). Worth checking whether other categories have the
-  same cross-domain duplication pattern once this one's confirmed fixed.
-
----
+### Theme (light/dark mode) bugs fixed
+- **`SimulatorPage.tsx`** (powers Study session questions) had every
+  color hardcoded as dark-only module constants, completely bypassing
+  the app's `ThemeProvider`/`useTheme()` system — always rendered dark
+  regardless of the user's theme setting. Fixed: proper light/dark
+  palettes wired to `useTheme()`.
+- **`ExamTakePage.tsx`** had the same hardcoded-dark-only bug, same fix
+  applied (new `getTheme(mode)` function, wired to `useTheme()`).
+- **`ExamReviewPage.tsx` / `ExamResultsPage.tsx`** had a more subtle
+  version: a **correct, working `getTheme()` function already existed**
+  reading `data-theme` off the DOM — but it was dead code, never called.
+  Hardcoded dark-only constants directly below it silently overrode it.
+  Fixed by wiring the existing function up to `useTheme()` (for proper
+  React reactivity instead of a one-time DOM read) and actually using
+  it, plus filling in a few missing overlay-color tokens
+  (`rgba(255,255,255,...)` hardcoded overlays that would've been
+  wrong/invisible in light mode).
 
 ## 🟡 Known simplifications (working as intended, not bugs)
 
@@ -147,14 +266,30 @@ still an idea."
 
 ## 🔧 Pending / Next up (in stated priority order)
 
-1. **Settings page** — gear icon currently only has the theme toggle.
+1. **Practice module** — routing is broken; UI needs an overhaul.
+2. **Study module answer-color bug** — correct answers sometimes show
+   red instead of green.
+3. **Exam landing page** — goes blank on "Back to Setup" navigation.
+4. **Settings page** — gear icon currently only has the theme toggle.
    Display name editing was pulled out of the header early on and was
    meant to move here; never built.
-2. **Assessment-related idea (unspecified)** — user has a concrete plan
+5. **Assessment-related idea (unspecified)** — user has a concrete plan
    here they haven't detailed yet.
-3. **Fix the D5/"Cloud and Virtualized Environments" data mistag** (see
-   Known data issue above), then audit for similar cross-domain category
-   name collisions elsewhere in the question bank.
+6. **Game scores** — currently not persisted to the database; move
+   them there.
+7. **Dashboard metrics** — connect remaining placeholder metrics to
+   real data.
+8. **Exam intro page** — not yet built.
+9. **General UI polish** — background image and other visual
+   refinements. Dashboard's current look was flagged as "too white,
+   lifeless, boring" — plan is to explore a redesign in Figma
+   (html.to.design plugin against an exported HTML/CSS snapshot) rather
+   than iterating live in code.
+10. **Google Cloud deployment** — planned, not yet started.
+11. **Spot-check the D4 question-category reassignments** done during
+    the 2026-08-06 data integrity audit against live ISACA Perform, since
+    those were resolved by inference rather than direct re-verification
+    (see note above).
 
 ## 📋 Deferred (explicitly, not forgotten)
 
@@ -209,7 +344,9 @@ still an idea."
 ## File map (touched across recent sessions)
 
 ```
-api/src/server.ts                                 (latest-practice endpoint added)
+api/src/server.ts                                 (latest-practice endpoint; Fisher-Yates shuffle fix)
+api/data/questions.json                            (full data integrity audit/fix, 2026-08-06)
+api/prisma/seed.ts                                  (unchanged, but see legacyId stability note above)
 frontend/src/layout/DashboardLayout.tsx            (sidebar removed, back-button added)
 frontend/src/layout/Sidebar.tsx                    (orphaned — nothing imports it)
 frontend/src/pages/Dashboard/Dashboard.tsx
@@ -219,8 +356,16 @@ frontend/src/pages/Dashboard/AssessmentQuizModal.tsx
 frontend/src/pages/Dashboard/HelpModal.tsx
 frontend/src/pages/Exam/ExamLandingPage.tsx
 frontend/src/pages/Exam/examUtils.ts
+frontend/src/pages/Exam/ExamTakePage.tsx           (theme fix, 2026-08-06)
+frontend/src/pages/Exam/ExamReviewPage.tsx         (theme fix — wired up dead getTheme(), 2026-08-06)
+frontend/src/pages/Exam/ExamResultsPage.tsx        (theme fix — wired up dead getTheme(), 2026-08-06)
+frontend/src/pages/Simulator/SimulatorPage.tsx     (theme fix, 2026-08-06)
 frontend/src/pages/Study/StudyPage.tsx
 frontend/src/pages/Practice/PracticeCategories.tsx
 frontend/src/pages/Practice/PracticeSessionPage.tsx
 frontend/src/utils/examCycles.ts
+
+Tooling (outside app source):
+isaca-clean-copy.js  (Tampermonkey userscript — copies questions from ISACA Perform)
+parse_questions.py   (updated to strip justification labels, accept inline "Question: xxx")
 ```
