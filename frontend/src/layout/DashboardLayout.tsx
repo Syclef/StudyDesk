@@ -2,10 +2,9 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 // No sidebar anymore — every page under this layout gets a single small
 // "back to Dashboard" link instead, since there are far more pages here
-// (Study, Practice, Exam + its sub-pages, Flashcards, Resources, Games +
-// its sub-pages) than can be safely hand-edited one by one. Hidden on the
-// Dashboard itself, since "back to Dashboard" makes no sense while already
-// there.
+// (Study, Practice, Exam + its sub-pages, Flashcards, Resources) than can
+// be safely hand-edited one by one. Hidden on the Dashboard itself, since
+// "back to Dashboard" makes no sense while already there.
 const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/practice-session.css";
 import { CISA_DOMAIN_WEIGHTS } from "../../utils/cisaWeights";
+import { useTheme } from "../../utils/theme";
 
 type Phase = "loading" | "error" | "active" | "checked" | "results";
 
@@ -31,14 +32,38 @@ const API_BASE = "http://127.0.0.1:4000";
 
 const TOTAL = 150;
 
-const BG = "#0f1b2d";
-const CARD = "#1a2540";
-const TEXT = "#e5eaf1";
-const MUTED = "#94a3b8";
-const BORDER = "rgba(255,255,255,0.10)";
-const ACCENT = "#3b82f6";
-const SUCCESS = "#4ade80";
-const DANGER = "#f87171";
+const PALETTES = {
+  dark: {
+    BG: "#0f1b2d",
+    CARD: "#1a2540",
+    TEXT: "#e5eaf1",
+    MUTED: "#94a3b8",
+    BORDER: "rgba(255,255,255,0.10)",
+    ACCENT: "#3b82f6",
+    SUCCESS: "#4ade80",
+    DANGER: "#f87171",
+    ON_ACCENT: "#fff",
+    OVERLAY_TRACK: "rgba(255,255,255,0.08)",
+    OVERLAY_SUBTLE: "rgba(255,255,255,0.04)",
+    OVERLAY_EXPLAIN: "rgba(255,255,255,0.03)",
+    OVERLAY_DISABLED: "rgba(255,255,255,0.08)",
+  },
+  light: {
+    BG: "#f8fafc",
+    CARD: "#ffffff",
+    TEXT: "#1e293b",
+    MUTED: "#64748b",
+    BORDER: "rgba(15,23,42,0.12)",
+    ACCENT: "#2563eb",
+    SUCCESS: "#16a34a",
+    DANGER: "#dc2626",
+    ON_ACCENT: "#fff",
+    OVERLAY_TRACK: "rgba(15,23,42,0.08)",
+    OVERLAY_SUBTLE: "rgba(15,23,42,0.03)",
+    OVERLAY_EXPLAIN: "rgba(15,23,42,0.02)",
+    OVERLAY_DISABLED: "rgba(15,23,42,0.06)",
+  },
+} as const;
 
 // Renders question text with bullet formatting for scenario-type questions
 function renderQuestionText(text: string, color: string): React.ReactNode {
@@ -107,6 +132,9 @@ export default function PracticeSessionPage() {
   const { category: setParam } = useParams<{ category: string }>();
   const navigate = useNavigate();
   const setNumber = setParam ?? "1";
+  const { mode } = useTheme();
+  const { BG, CARD, TEXT, MUTED, BORDER, ACCENT, SUCCESS, DANGER, ON_ACCENT,
+    OVERLAY_TRACK, OVERLAY_SUBTLE, OVERLAY_EXPLAIN, OVERLAY_DISABLED } = PALETTES[mode];
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -282,7 +310,7 @@ export default function PracticeSessionPage() {
                   <span style={{ color: TEXT }}>{domain}</span>
                   <span style={{ color: pct >= 75 ? SUCCESS : pct >= 60 ? "#fbbf24" : DANGER, fontWeight: 700 }}>{pct}% ({stats.correct}/{stats.total})</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                <div style={{ height: 6, borderRadius: 999, background: OVERLAY_TRACK, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${pct}%`, background: pct >= 75 ? SUCCESS : pct >= 60 ? "#fbbf24" : DANGER, borderRadius: 999, transition: "width 0.3s" }} />
                 </div>
               </div>
@@ -338,7 +366,7 @@ export default function PracticeSessionPage() {
       </div>
 
       <div style={{ fontSize: 12, color: MUTED, marginBottom: 6 }}>Question {index + 1} of {questions.length}</div>
-      <div style={{ width: "100%", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", marginBottom: 20, overflow: "hidden" }}>
+      <div style={{ width: "100%", height: 6, borderRadius: 999, background: OVERLAY_TRACK, marginBottom: 20, overflow: "hidden" }}>
         <div ref={progressFillRef} style={{ height: "100%", background: ACCENT, borderRadius: 999, width: "0%", transition: "width 0.2s" }} />
       </div>
 
@@ -353,7 +381,7 @@ export default function PracticeSessionPage() {
             const isSelected = selectedChoiceId === choice.id;
             const isCorrectChoice = choice.isCorrect;
 
-            let bg = "rgba(255,255,255,0.04)";
+            let bg = OVERLAY_SUBTLE;
             let border = BORDER;
             let color = TEXT;
 
@@ -398,7 +426,7 @@ export default function PracticeSessionPage() {
                 {hasJustification && (
                   <div style={{
                     padding: "10px 16px",
-                    background: "rgba(255,255,255,0.03)",
+                    background: OVERLAY_EXPLAIN,
                     border: `1px solid ${border}`,
                     borderTop: "none",
                     borderRadius: "0 0 8px 8px",
@@ -427,17 +455,17 @@ export default function PracticeSessionPage() {
             disabled={!selectedChoiceId}
             onClick={handleCheck}
             style={{
-              background: selectedChoiceId ? ACCENT : "rgba(255,255,255,0.08)",
+              background: selectedChoiceId ? ACCENT : OVERLAY_DISABLED,
               border: "none", borderRadius: 8, padding: "10px 28px",
               fontSize: 14, fontWeight: 600,
-              color: selectedChoiceId ? "#fff" : MUTED,
+              color: selectedChoiceId ? ON_ACCENT : MUTED,
               cursor: selectedChoiceId ? "pointer" : "not-allowed",
             }}
           >
             Check
           </button>
         ) : (
-          <button onClick={handleNext} style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+          <button onClick={handleNext} style={{ background: ACCENT, border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 600, color: ON_ACCENT, cursor: "pointer" }}>
             {index + 1 < questions.length ? "Next Question" : "Finish"}
           </button>
         )}

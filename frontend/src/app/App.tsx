@@ -22,15 +22,6 @@ import ExamIntroPage from "../pages/Exam/ExamIntroPage";
 import Flashcards from "../pages/Flashcards";
 import Resources from "../pages/Resources";
 
-/* Games */
-import GamesLayout from "../pages/Games/GamesLayout";
-import GameCenter from "../pages/Games/GameCenter";
-import CardHunterPage from "../pages/Games/CardHunterPage";
-import CardPickerPage from "../pages/Games/CardPickerPage";
-import EliminationPage from "../pages/Games/EliminationPage";
-import FlashcardBlitzPage from "../pages/Games/FlashcardBlitzPage";
-import StreakChallengePage from "../pages/Games/StreakChallengePage";
-import TimeAttackPage from "../pages/Games/TimeAttackPage";
 
 /* The Unified Focus Engine */
 import SimulatorPage from "../pages/Simulator/SimulatorPage";
@@ -63,17 +54,6 @@ function AppRoutes() {
         {/* RESOURCES */}
         <Route path="/flashcards" element={<Flashcards />} />
         <Route path="/resources" element={<Resources />} />
-
-        {/* GAME CENTER */}
-        <Route path="/games" element={<GamesLayout />}>
-          <Route index element={<GameCenter />} />
-          <Route path="card-hunter" element={<CardHunterPage />} />
-          <Route path="card-picker" element={<CardPickerPage />} />
-          <Route path="elimination" element={<EliminationPage />} />
-          <Route path="flashcard-blitz" element={<FlashcardBlitzPage />} />
-          <Route path="streak-challenge" element={<StreakChallengePage />} />
-          <Route path="time-attack" element={<TimeAttackPage />} />
-        </Route>
       </Route>
     </Routes>
   );
