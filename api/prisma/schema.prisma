@@ -8,11 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String
-  createdAt DateTime  @default(now())
-  attempts  Attempt[]
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password               String
+  displayName            String?
+  hasCompletedAssessment Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  attempts               Attempt[]
 }
 
 model KnowledgeStatement {
@@ -103,13 +105,6 @@ model Flashcard {
   term       String
   definition String
   createdAt  DateTime @default(now())
-}
-
-model GameScore {
-  id        String   @id
-  game      String
-  score     Int
-  createdAt DateTime @default(now())
 }
 
 enum Domain {

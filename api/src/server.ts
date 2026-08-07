@@ -3,10 +3,14 @@ import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import cookie from "@fastify/cookie";
+import jwt from "@fastify/jwt";
+import rateLimit from "@fastify/rate-limit";
 import { PrismaClient } from "@prisma/client";
 
 import { env } from "./config/env.js";
 import { questionsRoutes } from "./routes/questions.js";
+import { verifyPassword, signSession, setSessionCookie, clearSessionCookie, requireAuth } from "./lib/auth.js";
 
 const app = Fastify({ logger: true });
 const prisma = new PrismaClient();
@@ -24,37 +28,110 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-await app.register(cors, { origin: true });
+// CORS: locked to actual known frontend origins rather than `origin: true`
+// (which allows literally any website to call this API on a visitor's
+// behalf). Set FRONTEND_URL in production; localhost is always allowed for
+// local dev regardless of NODE_ENV, since that's the same-machine case.
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+await app.register(cors, { origin: allowedOrigins, credentials: true });
 await app.register(sensible);
+await app.register(cookie);
+await app.register(jwt, { secret: env.JWT_SECRET });
+await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 await app.register(questionsRoutes);
+app.addHook("onRequest", async (req, reply) => {
+  // Every route needs auth except health check and the login endpoint
+  // itself (you can't require a session to obtain a session). Strip the
+  // query string before comparing — req.url includes it (e.g. "/health?x=1").
+  const path = req.url.split("?")[0];
+  const publicPaths = ["/health", "/auth/login"];
+  if (publicPaths.includes(path)) return;
+  await requireAuth(req, reply);
+});
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 app.get("/health", async () => ({ ok: true }));
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// No public registration — this is a closed group. Accounts are created via
+// the `create-user` script (api/scripts/create-user.ts), run by whoever
+// administers the app, not through an API endpoint anyone could hit.
+
+app.post(
+  "/auth/login",
+  {
+    config: {
+      rateLimit: { max: 5, timeWindow: "1 minute" }, // tighter limit specifically here, against brute-force guessing
+    },
+  },
+  async (req, reply) => {
+    const { email, password } = req.body as { email?: string; password?: string };
+    if (!email || !password) return reply.badRequest("Email and password are required");
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    // Same generic error whether the email doesn't exist or the password is
+    // wrong — distinguishing the two lets an attacker enumerate valid
+    // emails on your user base.
+    if (!user) return reply.unauthorized("Invalid email or password");
+
+    const valid = await verifyPassword(user.password, password);
+    if (!valid) return reply.unauthorized("Invalid email or password");
+
+    const token = signSession(app, user.id);
+    setSessionCookie(reply, token);
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      hasCompletedAssessment: user.hasCompletedAssessment,
+    };
+  }
+);
+
+app.post("/auth/logout", async (_req, reply) => {
+  clearSessionCookie(reply);
+  return { ok: true };
+});
+
+app.get("/auth/me", async (req, reply) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user) return reply.unauthorized();
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    hasCompletedAssessment: user.hasCompletedAssessment,
+  };
+});
+
+app.patch("/auth/me", async (req, reply) => {
+  const { displayName } = req.body as { displayName?: string };
+  const user = await prisma.user.update({
+    where: { id: req.userId },
+    data: { ...(displayName !== undefined && { displayName }) },
+  });
+  return { id: user.id, email: user.email, displayName: user.displayName };
+});
+
+// Marks the assessment as completed for the logged-in user. Server-side,
+// tied to a real account — replaces the old localStorage-only flag, which
+// couldn't actually enforce "once ever" for anyone (clearing storage, a
+// different browser, or a different device all reset it trivially, and it
+// wasn't even tied to a person in the first place).
+app.post("/auth/assessment-complete", async (req) => {
+  await prisma.user.update({ where: { id: req.userId }, data: { hasCompletedAssessment: true } });
+  return { ok: true };
+});
+
 // ─── Flashcards ───────────────────────────────────────────────────────────────
 
 app.get("/flashcards", async () => {
   return prisma.flashcard.findMany({ orderBy: { id: "asc" } });
-});
-
-// ─── Game Scores ──────────────────────────────────────────────────────────────
-
-app.get("/scores/:game", async (req) => {
-  const { game } = req.params as { game: string };
-  const scores = await prisma.gameScore.findMany({
-    where: { game },
-    orderBy: { score: "desc" },
-    take: 10,
-  });
-  return { game, best: scores[0]?.score ?? 0, history: scores };
-});
-
-app.post("/scores/:game", async (req, reply) => {
-  const { game } = req.params as { game: string };
-  const { score } = req.body as { score: number };
-  if (typeof score !== "number") return reply.badRequest("score must be a number");
-  return prisma.gameScore.create({ data: { id: `${game}-${Date.now()}`, game, score } });
 });
 
 // ─── Attempts ─────────────────────────────────────────────────────────────────
@@ -63,6 +140,7 @@ app.get("/attempts", async (req) => {
   const { mode } = req.query as { mode?: string };
   const rows = await prisma.attempt.findMany({
     where: {
+      userId: req.userId,
       submittedAt: { not: null },
       ...(mode && { mode: mode as any }),
     },
@@ -104,13 +182,6 @@ app.post("/attempts", async (req, reply) => {
     mockSlot?: number;
   };
 
-  const ANON_USER_ID = "anon";
-  await prisma.user.upsert({
-    where: { id: ANON_USER_ID },
-    create: { id: ANON_USER_ID, email: "anon@local", password: "none" },
-    update: {},
-  });
-
   let selected: any[];
   
   if (questionIds && questionIds.length > 0) {
@@ -139,7 +210,7 @@ if (selected.length === 0) return reply.badRequest("No questions found");
 
   const attempt = await prisma.attempt.create({
     data: {
-      userId: ANON_USER_ID,
+      userId: req.userId!,
       mode,
       mockSlot,
       durationSec,
@@ -184,6 +255,7 @@ app.patch("/attempts/:id/answers/:questionId", async (req, reply) => {
 
   const attempt = await prisma.attempt.findUnique({ where: { id } });
   if (!attempt) return reply.notFound("Attempt not found");
+  if (attempt.userId !== req.userId) return reply.forbidden();
   if (attempt.submittedAt) return reply.badRequest("Already submitted");
 
   let choiceId: string | undefined = directChoiceId;
@@ -212,6 +284,7 @@ app.post("/attempts/:id/submit", async (req, reply) => {
     include: { answers: true },
   });
   if (!attempt) return reply.notFound("Attempt not found");
+  if (attempt.userId !== req.userId) return reply.forbidden();
   if (attempt.submittedAt) return reply.badRequest("Already submitted");
 
   let correct = 0;
@@ -245,6 +318,7 @@ app.get("/attempts/:id/results", async (req, reply) => {
     },
   });
   if (!attempt) return reply.notFound("Attempt not found");
+  if (attempt.userId !== req.userId) return reply.forbidden();
 
   const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a]));
 
@@ -307,6 +381,7 @@ app.get("/progress/domains", async (req, reply) => {
     // specifically in-progress/abandoned Practice sessions (see OR clause above).
     const eligibleAttempts = await prisma.attempt.findMany({
       where: {
+        userId: req.userId,
         OR: [
           { submittedAt: { not: null } },
           { mode: "PRACTICE" },
@@ -381,6 +456,7 @@ app.get("/progress/domains/trend", async (req, reply) => {
 
     const eligibleAttempts = await prisma.attempt.findMany({
       where: {
+        userId: req.userId,
         OR: [{ submittedAt: { not: null } }, { mode: "PRACTICE" }],
         ...(mode && { mode: mode as any }),
       },
@@ -452,6 +528,7 @@ app.get("/progress/categories", async (req, reply) => {
 
     const eligibleAttempts = await prisma.attempt.findMany({
       where: {
+        userId: req.userId,
         OR: [
           { submittedAt: { not: null } },
           { mode: "PRACTICE" },
@@ -515,7 +592,7 @@ app.get("/progress/categories", async (req, reply) => {
 app.get("/progress/latest-practice", async (req, reply) => {
   try {
     const latest = await prisma.attempt.findFirst({
-      where: { mode: "PRACTICE", submittedAt: { not: null } },
+      where: { userId: req.userId, mode: "PRACTICE", submittedAt: { not: null } },
       orderBy: { submittedAt: "desc" },
     });
     if (!latest) return { mockSlot: null, submittedAt: null, domains: [] };
@@ -557,7 +634,7 @@ app.get("/progress/latest-practice", async (req, reply) => {
 app.get("/progress/streak", async (req, reply) => {
   try {
     const attempts = await prisma.attempt.findMany({
-      where: { submittedAt: { not: null } },
+      where: { userId: req.userId, submittedAt: { not: null } },
       select: { submittedAt: true },
     });
 
@@ -595,15 +672,16 @@ app.get("/progress/streak", async (req, reply) => {
 });
 
 // ─── Reset ─────────────────────────────────────────────────────────────────
+// Only clears the logged-in user's own EXAM attempts, never anyone else's.
 app.delete("/attempts/exam", async (req, reply) => {
   await prisma.attemptAnswer.deleteMany({
-    where: { attempt: { mode: "EXAM" } },
+    where: { attempt: { userId: req.userId, mode: "EXAM" } },
   });
   await prisma.attemptQuestion.deleteMany({
-    where: { attempt: { mode: "EXAM" } },
+    where: { attempt: { userId: req.userId, mode: "EXAM" } },
   });
   await prisma.attempt.deleteMany({
-    where: { mode: "EXAM" },
+    where: { userId: req.userId, mode: "EXAM" },
   });
   return { ok: true };
 });

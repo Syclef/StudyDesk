@@ -5,7 +5,7 @@
 
 import { PrismaClient, Domain } from "@prisma/client";
 import { createRequire } from "module";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../src/lib/auth.js";
 
 const require = createRequire(import.meta.url);
 const prisma = new PrismaClient();
@@ -56,13 +56,13 @@ function toDomainEnum(code: string): Domain {
 
 async function seedDevUser() {
   const email = "dev@local.test";
-  const password = await bcrypt.hash("password123", 10);
+  const password = await hashPassword("dev-local-password-only"); // 12+ chars, matches isPasswordAcceptable's minimum
   await prisma.user.upsert({
     where: { email },
     update: {},
     create: { email, password },
   });
-  console.log("✅ Dev user done");
+  console.log("✅ Dev user done (dev@local.test / dev-local-password-only)");
 }
 
 // ─── Seed flashcards ──────────────────────────────────────────────────────────

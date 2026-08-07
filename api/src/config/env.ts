@@ -6,8 +6,10 @@ const EnvSchema = z.object({
   // DB
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  // We'll add auth later, but we prepare now:
-  JWT_SECRET: z.string().min(16).optional(),
+  // Auth: signs/verifies session JWTs. Generate a real random value for
+  // this — e.g. `openssl rand -base64 48` — never reuse the placeholder
+  // between environments.
+  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -23,7 +25,8 @@ export const env: Env = (() => {
     console.error(
       "\nFix your api/.env file. Example:\n" +
         'DATABASE_URL="postgresql://user:pass@localhost:5432/db"\n' +
-        "PORT=4000\n"
+        "PORT=4000\n" +
+        'JWT_SECRET="<run: openssl rand -base64 48>"\n'
     );
 
     // Fail fast (prevents weird runtime crashes later)
