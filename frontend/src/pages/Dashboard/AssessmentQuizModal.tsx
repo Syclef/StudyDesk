@@ -3,6 +3,22 @@ import React, { useState } from "react";
 const API_BASE = "http://127.0.0.1:4000";
 const DOMAIN_CODES = ["D1", "D2", "D3", "D4", "D5"];
 const PER_DOMAIN = 5;
+const SEEN_KEY = "studydesk_assessment_seen_questions_v1";
+
+function getSeenIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addSeenIds(ids: string[]) {
+  const seen = getSeenIds();
+  ids.forEach((id) => seen.add(id));
+  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+}
 
 interface Choice {
   id: string;
@@ -53,8 +69,16 @@ const modal: React.CSSProperties = {
   fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
 };
 
+const DOMAIN_NAMES: Record<string, string> = {
+  D1: "Information System Auditing Process",
+  D2: "Governance and Management of IT",
+  D3: "Information Systems Acquisition, Development, and Implementation",
+  D4: "Information Systems Operations and Business Resilience",
+  D5: "Protection of Information Assets",
+};
+
 export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
-  const [phase, setPhase] = useState<"intro" | "quiz">("intro");
+  const [phase, setPhase] = useState<"intro" | "quiz" | "results">("intro");
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [index, setIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,9 +90,19 @@ export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
     setPhase("quiz");
     Promise.all(DOMAIN_CODES.map((d) => fetch(`${API_BASE}/questions?domain=${d}`).then((r) => (r.ok ? r.json() : Promise.reject()))))
       .then((allByDomain: Question[][]) => {
-        const picked = allByDomain.flatMap((qs) => shuffle(qs).slice(0, Math.min(PER_DOMAIN, qs.length)));
+        const seen = getSeenIds();
+        const picked = allByDomain.flatMap((qs) => {
+          const unseen = qs.filter((q) => !seen.has(q.id));
+          // If not enough unseen questions remain in this domain (small pool,
+          // or you've genuinely seen most of it before), fall back to the full
+          // pool rather than showing fewer than PER_DOMAIN questions.
+          const pool = unseen.length >= Math.min(PER_DOMAIN, qs.length) ? unseen : qs;
+          return shuffle(pool).slice(0, Math.min(PER_DOMAIN, pool.length));
+        });
         if (picked.length === 0) throw new Error();
-        setQuestions(shuffle(picked));
+        const finalOrder = shuffle(picked);
+        setQuestions(finalOrder);
+        addSeenIds(finalOrder.map((q) => q.id));
         const init: Record<string, AssessmentPerDomain> = {};
         DOMAIN_CODES.forEach((d) => { init[d] = { correct: 0, total: 0 }; });
         setResults(init);
@@ -103,8 +137,12 @@ export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
       setSelectedId(null);
       setChecked(false);
     } else {
-      onComplete(results);
+      setPhase("results");
     }
+  };
+
+  const handleFinish = () => {
+    onComplete(results);
   };
 
   return (
@@ -122,15 +160,13 @@ export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
               five CISA domains) to get a quick read on where you stand right now.
             </div>
             <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.7, margin: "0 0 16px 0" }}>
-              <strong>Why it matters:</strong> your results decide how Current Study Plan recommends what
-              to study next — either <strong>Hybrid</strong> (unstudied domains first, then your weakest)
-              or <strong>Adaptive</strong> (always your weakest domains first). You can still switch between
-              the two manually afterward.
+              <strong>Why it matters:</strong> your results feed straight into Current Study Plan, which
+              shows every domain you're under 75% on — ranked by official CISA exam weight, so the
+              highest-stakes weak domain always shows up first.
             </div>
             <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.7, margin: "0 0 28px 0" }}>
-              <strong>What you'll get:</strong> a recommended mode based on how your scores compare across
-              domains. This is diagnostic only — it won't affect your Progress or Domain Breakdown, and it's
-              one-time, so you won't be asked again once it's done.
+              <strong>What you'll get:</strong> a per-domain score breakdown so you can see exactly where
+              you stand. It's one-time, so you won't be asked again once it's done.
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button onClick={startQuiz}
@@ -145,7 +181,7 @@ export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
           </div>
         ) : !questions ? (
           <div style={{ padding: "40px 0", color: "var(--muted)", fontSize: 14, textAlign: "center" }}>Loading…</div>
-        ) : current ? (
+        ) : phase === "quiz" && current ? (
           <div>
             <div style={{ fontSize: 13, color: "var(--muted)", margin: "14px 0 18px 0" }}>
               Question {index + 1} of {questions.length} · one-time — this won't affect your Progress or Domain Breakdown
@@ -193,6 +229,73 @@ export default function AssessmentQuizModal({ onComplete, onClose }: Props) {
                 </button>
               )}
             </div>
+          </div>
+        ) : phase === "results" ? (
+          <div>
+            {(() => {
+              const totalCorrect = Object.values(results).reduce((s, d) => s + d.correct, 0);
+              const totalQuestions = Object.values(results).reduce((s, d) => s + d.total, 0);
+              const overallPct = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+              return (
+                <>
+                  <div style={{ fontSize: 15, color: "var(--muted)", margin: "14px 0 4px 0" }}>
+                    You scored
+                  </div>
+                  <div style={{ fontSize: 40, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>
+                    {totalCorrect} / {totalQuestions} <span style={{ fontSize: 22, color: "var(--muted)", fontWeight: 500 }}>({overallPct}%)</span>
+                  </div>
+                  <div style={{ marginBottom: 24 }} />
+
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 10 }}>
+                    By domain
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
+                    {DOMAIN_CODES.map((d) => {
+                      const r = results[d];
+                      const pct = r && r.total > 0 ? Math.round((r.correct / r.total) * 100) : null;
+                      const barColor = pct === null ? "var(--muted)" : pct >= 75 ? "var(--success,#34c759)" : pct >= 50 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)";
+                      return (
+                        <div key={d} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 220, fontSize: 13, color: "var(--text)", flexShrink: 0 }}>{DOMAIN_NAMES[d] ?? d}</div>
+                          <div style={{ flex: 1, height: 8, borderRadius: 999, background: "var(--panel-2, rgba(128,128,128,0.15))", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${pct ?? 0}%`, background: barColor, borderRadius: 999 }} />
+                          </div>
+                          <div style={{ width: 70, fontSize: 13, color: "var(--muted)", textAlign: "right", flexShrink: 0 }}>
+                            {r ? `${r.correct}/${r.total}` : "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {(() => {
+                    const weakDomains = DOMAIN_CODES.filter((d) => {
+                      const r = results[d];
+                      return r && r.total > 0 && Math.round((r.correct / r.total) * 100) < 75;
+                    });
+                    return (
+                      <div style={{
+                        background: "var(--panel-2, rgba(128,128,128,0.08))", borderRadius: 12, padding: "16px 20px", marginBottom: 24,
+                      }}>
+                        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>Based on these results</div>
+                        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>
+                          {weakDomains.length > 0
+                            ? <>Current Study Plan will show <strong>{weakDomains.map((d) => DOMAIN_NAMES[d] ?? d).join(", ")}</strong> as weak — ranked by exam weight, heaviest first.</>
+                            : "You're at 75% or higher across every domain — Current Study Plan won't have anything to flag as weak from this."}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button onClick={handleFinish}
+                      style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+                      Continue to Dashboard
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         ) : null}
       </div>

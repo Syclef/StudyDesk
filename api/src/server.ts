@@ -365,6 +365,75 @@ app.get("/progress/domains", async (req, reply) => {
   }
 });
 
+// GET /progress/domains/trend?mode=STUDY
+// Are you actually improving, or just currently at some level? Unlike
+// /progress/domains above (which dedupes to your LATEST answer per question,
+// discarding history), this keeps every individual answer, splits them
+// chronologically into an "earlier half" and "recent half" per domain, and
+// compares accuracy between the two. Needs a minimum sample size per domain
+// before showing anything — a 1-question swing on a tiny sample isn't a
+// trend, it's noise.
+const MIN_ANSWERS_FOR_TREND = 6;
+
+app.get("/progress/domains/trend", async (req, reply) => {
+  try {
+    const { mode } = req.query as { mode?: string };
+
+    const eligibleAttempts = await prisma.attempt.findMany({
+      where: {
+        OR: [{ submittedAt: { not: null } }, { mode: "PRACTICE" }],
+        ...(mode && { mode: mode as any }),
+      },
+      select: { id: true, submittedAt: true, startedAt: true },
+    });
+    const timeById = new Map(eligibleAttempts.map((a) => [a.id, (a.submittedAt ?? a.startedAt).getTime()]));
+    const attemptIds = eligibleAttempts.map((a) => a.id);
+
+    const answers = attemptIds.length === 0 ? [] : await prisma.attemptAnswer.findMany({
+      where: { choiceId: { not: null }, attemptId: { in: attemptIds } },
+      select: {
+        attemptId: true,
+        answeredAt: true,
+        choiceId: true,
+        question: { select: { domain: true, choices: { select: { id: true, isCorrect: true } } } },
+      },
+    });
+
+    const byDomain: Record<string, { time: number; correct: boolean }[]> = {};
+    for (const a of answers) {
+      const t = a.answeredAt?.getTime() ?? timeById.get(a.attemptId) ?? 0;
+      const isCorrect = a.question.choices.find((c) => c.id === a.choiceId)?.isCorrect ?? false;
+      const d = a.question.domain;
+      (byDomain[d] ??= []).push({ time: t, correct: isCorrect });
+    }
+
+    const result: Record<string, { earlierAccuracy: number; recentAccuracy: number; deltaPct: number; sampleSize: number } | null> = {};
+    for (const [domain, entries] of Object.entries(byDomain)) {
+      if (entries.length < MIN_ANSWERS_FOR_TREND) {
+        result[domain] = null;
+        continue;
+      }
+      entries.sort((a, b) => a.time - b.time);
+      const mid = Math.floor(entries.length / 2);
+      const earlier = entries.slice(0, mid);
+      const recent = entries.slice(mid);
+      const earlierAcc = Math.round((earlier.filter((e) => e.correct).length / earlier.length) * 100);
+      const recentAcc = Math.round((recent.filter((e) => e.correct).length / recent.length) * 100);
+      result[domain] = {
+        earlierAccuracy: earlierAcc,
+        recentAccuracy: recentAcc,
+        deltaPct: recentAcc - earlierAcc,
+        sampleSize: entries.length,
+      };
+    }
+
+    return result;
+  } catch (err) {
+    req.log.error(err);
+    return reply.internalServerError("Failed to compute domain trend");
+  }
+});
+
 // Per-CATEGORY variant of the same logic above — StudyPage needs this to know
 // which specific topic inside a domain is weak, not just the domain overall.
 // A domain can look fine on average while one category inside it is genuinely

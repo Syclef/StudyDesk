@@ -1,6 +1,6 @@
 # CISA Prep — Progress Tracker
 
-Last updated: 2026-08-06 (after question data integrity audit, theme fixes, shuffle fix)
+Last updated: 2026-08-06 (multi-user confirmed — auth/security elevated to top priority)
 
 This file exists so we don't have to reconstruct project history from chat
 scrollback. Update it whenever a feature lands or a decision gets made —
@@ -254,39 +254,254 @@ still an idea."
   (`rgba(255,255,255,...)` hardcoded overlays that would've been
   wrong/invisible in light mode).
 
-## 🟡 Known simplifications (working as intended, not bugs)
+### Assessment fixes (2026-08-06)
+- **Results screen added.** `handleAssessmentComplete` in `Dashboard.tsx`
+  was computing per-domain scores and the recommended mode correctly,
+  but then just called `setShowAssessment(false)` — closing the modal
+  with zero feedback shown. `AssessmentQuizModal.tsx` now has a real
+  `"results"` phase (added between `"quiz"` and modal-close): total
+  score, a per-domain progress-bar breakdown, and the recommended mode
+  with a plain-language explanation of why, before a "Continue to
+  Dashboard" button actually calls `onComplete`.
+- **Hybrid/Adaptive manual toggle added, then removed later the same
+  session.** Initially added because the assessment's own intro copy
+  promised "You can still switch between the two manually afterward"
+  and no such UI existed. Superseded a few turns later when Current
+  Study Plan's selection logic was redesigned entirely (see "Current
+  Study Plan redesign" below) — once selection is just "show weak
+  domains," a Hybrid-vs-Adaptive choice no longer means anything, so
+  the toggle was removed rather than kept as dead UI.
+- **"Only 2 domains" — superseded, see redesign below.** Originally
+  clarified via a relabel ("CURRENT STUDY PLAN — NEXT UP") since the
+  `.slice(0, 2)` cap was intentional but confusing. Later removed
+  entirely — Current Study Plan now shows *every* weak domain, no cap.
+- **Retake mechanism (manual, for testing only):** the assessment is
+  still meant to run once — there's no "retake" button by design. To
+  force a retake (e.g. to verify these fixes), clear
+  `localStorage.removeItem("studydesk_assessment_result_v1")` in the
+  browser console and refresh. See the note under Pending (#6) about
+  why this same mechanism means "once ever" isn't currently
+  *enforceable* — it's just the default, resettable by anyone who
+  clears their own browser storage.
+
+### Current Study Plan redesign, trend tracking, Daily Quiz streak (2026-08-06)
+- **Removed the exam-weight display and the whole Hybrid/Adaptive
+  distinction entirely.** Turned out "26% weight" next to a domain meant
+  nothing to a user without context, and once selection is purely
+  "weak domains, ranked somehow," Hybrid-vs-Adaptive stopped being a
+  meaningful choice — it collapsed into one behavior. Removed
+  `studyPlanMode` state, the toggle UI, `STUDY_PLAN_MODE_KEY`, and all
+  the recommended-mode logic in the assessment flow along with it.
+- **Current Study Plan now shows every domain under 75%, weakest
+  first** (untried domains — no score yet — sort last, since there's
+  nothing to rank them against). Visual style adapted from the
+  assessment results screen: colored progress bars (amber 50-74%, red
+  <50%) instead of plain text rows.
+- **New: per-domain improvement indicator (▲/▼).** New backend
+  endpoint, `GET /progress/domains/trend?mode=STUDY` — unlike
+  `/progress/domains` (which dedupes to your *latest* answer per
+  question, discarding history), this keeps every individual Study
+  answer, splits them chronologically into an earlier half and a
+  recent half per domain, and compares accuracy between the two.
+  Requires at least 6 answered questions in a domain before showing
+  anything (`MIN_ANSWERS_FOR_TREND` in `server.ts`) — a 1-question swing
+  on a tiny sample isn't a trend, it's noise. Uses the existing
+  `answeredAt` timestamp on `AttemptAnswer` (already in the schema, just
+  unused until now) — no schema changes needed.
+- **Daily Quiz: streak system + previous-score-for-this-topic.**
+  Storage migrated from a single `studydesk_daily_quiz_v1` key (today's
+  result only, overwritten daily) to a full history array
+  (`studydesk_daily_quiz_history_v1`). New helpers in `Dashboard.tsx`:
+  `computeStreak()` — consecutive calendar days ending today (or
+  yesterday, if today's quiz just hasn't happened yet — a streak
+  shouldn't zero out mid-day) — and `previousScoreForDomain()`, which
+  finds your most recent *prior* completion of the same domain
+  specifically (not just "yesterday's score," since the daily quiz
+  rotates through all 5 domains by date via `pickDomainForDate`, so the
+  same domain typically only recurs every ~5 days). Streak shown as a
+  🔥 badge in the card header; previous score shown as a line under
+  today's topic ("Last time on this topic: 7/10 (70%)").
+
+## 📐 Study Plan roadmap (design discussion, not yet built)
+
+A longer design conversation (partly with Gemini) produced a fuller
+vision for what "Current Study Plan" could become — recorded here so
+the ideas aren't lost, but explicitly **not** committed to for the
+Aug 31 deadline. Worth revisiting post-deadline or if there's spare
+time.
+
+**Important context update:** StudyDesk is now confirmed to be going
+**multi-user** (a group, not just personal use) — this changes the
+priority of a couple of items below from "premature optimization" to
+"actually relevant soon":
+- The cached `UserDomainStat`-style table (see below) — live-computed
+  queries are fine for one person's data on a local machine, but
+  become a real concern once multiple people are hitting the same
+  endpoints.
+- More importantly, this makes **Pending #6 (Production auth +
+  security hardening) a hard blocker, not a nice-to-have.** Every
+  request currently runs as a single shared hardcoded `"anon"` account
+  — with a real group of users, that's not a future security
+  consideration anymore, it's an immediate correctness problem: without
+  real per-user accounts, everyone's progress, attempts, and Study Plan
+  data would collide into one shared identity from day one. Real auth
+  needs to land *before* this goes to more than one person, not after.
+
+- **Weighted Deficit Score for prioritization:**
+  `(75% − Current Accuracy) × Exam Weight`, so a 10-point deficit in a
+  26%-weighted domain outranks a 15-point deficit in a 12%-weighted one.
+  (Note: today's simpler "weakest first" fix deliberately does *not* do
+  this — see above. This would be a deliberate upgrade, not a bug fix,
+  if pursued.)
+- **Actionable "next best action" cards** instead of a static list —
+  e.g. "Drill 10 Missed Questions" launching a filtered mini-quiz of
+  previously-wrong questions in a weak domain, "Review 5 Weak Concepts."
+  Requires: a way to query "questions this user got wrong," which is
+  derivable from existing `AttemptAnswer` data (join to `Choice.isCorrect`),
+  but the UI/flow to launch a filtered practice session from it doesn't
+  exist yet.
+- **Countdown-driven study phases**, tied to the exam date already
+  tracked on the dashboard: early phase = broad weakness-hunting,
+  mid phase = shift priority to high-weight domains (D4/D5), final
+  1-2 days = light taper (flashcards/summary review only, avoid new
+  material). Would need explicit phase-boundary logic keyed off days-
+  until-exam.
+- **Diagnostic gap categorization** (knowledge gap vs. application
+  gap — theoretical/definition questions missed vs. scenario-based
+  FIRST/BEST/MOST questions missed) to recommend flashcards vs. drilled
+  practice accordingly. Would need question-level tagging beyond the
+  current `category` field — not present in the schema today.
+- **Readiness status badges per domain:** 🔴 Critical (<65% or
+  untested high-weight domain), 🟡 In Progress (65-74%), 🟢 Exam Ready
+  (≥75% *and* a minimum question-volume threshold, e.g. 50+ answered —
+  so a domain can't look "ready" off 3 lucky guesses).
+- **Blended Exam/Practice/Study readiness weighting**, discussed at
+  length: Exam Mode attempts (timed, blind, closest to real conditions)
+  should carry more weight toward "true readiness" than Practice
+  (untimed, instant feedback, prone to false confidence from repeat
+  exposure) or Study. A concrete proposal from that discussion: retake
+  decay (a 2nd/3rd attempt at the same Practice set counts for much
+  less than the 1st, to filter out answer memorization) and an overall
+  Exam:Practice weighting like 60:40. **Concrete mechanism for retake
+  decay** (from a follow-up Gemini conversation, worth preserving):
+  add an `attemptNumber` field to `AttemptAnswer` (or derive it at query
+  time from existing `Attempt.startedAt` ordering per user+question —
+  either works, deriving avoids a migration), then weight accuracy
+  calculations so `attemptNumber = 1` counts at 100% and subsequent
+  attempts count at roughly 30–50%, rather than treating every attempt
+  as equally informative. **Correction from that
+  conversation, important to preserve:** Practice mode in this app is
+  **not** domain/topic-filterable — it's 5 fixed full-length practice
+  sets, structurally identical to Exam Mode minus the timer and with
+  instant per-question feedback. Any design here needs to work within
+  that constraint, not assume free-form practice-by-topic exists.
+- **Cold-start / first-time-user flow:** a distinct onboarding state
+  before any data exists — "Establish Your Baseline" CTA in place of a
+  domain list, unlocking the real Study Plan logic only after the first
+  Practice/Exam set or the diagnostic Assessment is completed. Partially
+  exists already (today's Study Plan does show a "Take Assessment / I'll
+  Do It Myself" CTA when nothing's been attempted) — the more elaborate
+  multi-phase version (Setup → Calibration → Full Adaptive) is not built.
+- **Single-mode fallback handling:** if a user only ever uses Practice
+  (risk: inflated confidence from instant feedback) or only Exam (risk:
+  no granular diagnostic signal), the readiness calculation and Study
+  Plan guidance should adapt rather than silently assuming both are in
+  use. Not implemented.
+- **Cached per-user domain stats table** (e.g. `UserDomainStat`:
+  `userId`, `domainId`, `practiceAccuracy`, `examAccuracy`,
+  `lastAttemptAt`), recalculated on attempt submission rather than
+  live-computed on every dashboard load. Skip-worthy for one person's
+  data on a local machine; **actually worth doing once multiple users
+  are hitting the same API** (see multi-user note above) — the current
+  `/progress/domains` and `/progress/domains/trend` endpoints scan and
+  aggregate raw `AttemptAnswer` rows on every request, which is fine at
+  today's single-user scale but won't stay fine indefinitely as
+  attempt history grows across several people.
+
+---
+
+
 
 - **Flashcards have zero tracking.** No session log, not part of Focus
   Areas/Strengths. Confirmed fine — it's a definitions-drilling tool, not
   meant to feed the readiness system.
-- **Assessment is genuinely one-time, no retake.** Confirmed intentional
-  — user has a concrete follow-up idea that builds on this (see Pending).
+- **Assessment retake:** no "retake" button exists by design — it's
+  meant to be one-time diagnostic data. As of 2026-08-06 this is only
+  enforced client-side (`localStorage`), not server-side — see Pending
+  #6 for the plan to make it properly enforceable once real user
+  accounts exist.
 
 ---
 
 ## 🔧 Pending / Next up (in stated priority order)
 
-1. **Practice module** — routing is broken; UI needs an overhaul.
-2. **Study module answer-color bug** — correct answers sometimes show
+1. **Production auth + real per-user accounts — elevated to top
+   priority, 2026-08-06.** StudyDesk is now confirmed going
+   **multi-user** (a group, not solo use) — this is no longer a
+   "before going public" nice-to-have, it's a correctness blocker.
+   Bundles several related gaps, all stemming from the same root cause:
+   - **No real authentication at all right now.** Every request in
+     `server.ts` runs as a single hardcoded shared account
+     (`ANON_USER_ID = "anon"`, password `"none"`). With more than one
+     real person using this, everyone's progress, attempts, and Study
+     Plan data would collide into that one shared identity — not a
+     hypothetical risk, an immediate one as soon as a second person
+     opens the app.
+   - The assessment is meant to run **once ever per user**, but
+     enforcement is currently a `localStorage` flag only — meaningless
+     once there's more than one person, since it's not even tied to an
+     identity at all right now. True one-time enforcement needs a
+     server-side check tied to a real user account (e.g. a
+     `hasCompletedAssessment` flag checked via API before the modal can
+     open).
+   - **CORS is wide open** (`origin: true` in `server.ts`) — needs
+     locking down to the exact deployed frontend domain before going
+     public.
+   - **No rate limiting** on the API — needed both against abuse and
+     to avoid burning through free-tier hosting quotas.
+   - Once real accounts exist, the cached `UserDomainStat`-style table
+     idea (see Study Plan roadmap above) also becomes worth doing, not
+     just theoretical — live-aggregating raw `AttemptAnswer` rows on
+     every dashboard load is fine for one person, less fine for several.
+2. **Practice module** — routing is broken; UI needs an overhaul.
+3. **Study module answer-color bug** — correct answers sometimes show
    red instead of green.
-3. **Exam landing page** — goes blank on "Back to Setup" navigation.
-4. **Settings page** — gear icon currently only has the theme toggle.
+4. **Exam landing page** — goes blank on "Back to Setup" navigation.
+5. **Settings page** — gear icon currently only has the theme toggle.
    Display name editing was pulled out of the header early on and was
-   meant to move here; never built.
-5. **Assessment-related idea (unspecified)** — user has a concrete plan
-   here they haven't detailed yet.
-6. **Game scores** — currently not persisted to the database; move
+   meant to move here; never built. (Now more clearly needed once real
+   accounts exist — this is presumably where per-user display name
+   actually belongs.)
+6. ~~Assessment-related idea (unspecified)~~ — **done, 2026-08-06.** Turned
+   out to be two concrete bugs: the assessment silently closed with no
+   results screen shown (score, per-domain breakdown were computed but
+   never rendered), and a promised-but-never-built Hybrid/Adaptive
+   toggle. Both addressed — though the toggle itself was later removed
+   entirely rather than fixed, once Current Study Plan's whole
+   selection logic was redesigned the same day (see the "Current Study
+   Plan redesign" entry above) to just show weak domains directly,
+   which made Hybrid-vs-Adaptive a distinction without a difference.
+7. **Game scores** — currently not persisted to the database; move
    them there.
-7. **Dashboard metrics** — connect remaining placeholder metrics to
+8. **Dashboard metrics** — connect remaining placeholder metrics to
    real data.
-8. **Exam intro page** — not yet built.
-9. **General UI polish** — background image and other visual
-   refinements. Dashboard's current look was flagged as "too white,
-   lifeless, boring" — plan is to explore a redesign in Figma
-   (html.to.design plugin against an exported HTML/CSS snapshot) rather
-   than iterating live in code.
-10. **Google Cloud deployment** — planned, not yet started.
-11. **Spot-check the D4 question-category reassignments** done during
+9. **Exam intro page** — not yet built.
+10. **General UI polish** — background image and other visual
+    refinements. Dashboard's current look was flagged as "too white,
+    lifeless, boring" — plan is to explore a redesign in Figma
+    (html.to.design plugin against an exported HTML/CSS snapshot) rather
+    than iterating live in code.
+11. **Production deployment** — decided **against** Google Cloud (Cloud
+    SQL isn't free-tier). Current plan, given "free tier only": **Vercel**
+    (frontend) + **Render** free Web Service (API — accept the 15-min
+    idle spin-down/cold-start tradeoff) + **Neon or Supabase** (Postgres —
+    both have a genuinely permanent free tier, unlike Railway which
+    dropped its free tier in favor of a 30-day $5 trial requiring a
+    card). Blocked on: the 18 hardcoded `localhost`/`127.0.0.1`
+    references in the frontend need to become an env var, and item 1
+    above (auth/security) must land *before* this goes live to the
+    group, not after — this is now a hard dependency, not a suggestion.
+12. **Spot-check the D4 question-category reassignments** done during
     the 2026-08-06 data integrity audit against live ISACA Perform, since
     those were resolved by inference rather than direct re-verification
     (see note above).
@@ -294,8 +509,6 @@ still an idea."
 ## 📋 Deferred (explicitly, not forgotten)
 
 - **Mobile/responsive layout** — after desktop is fully polished.
-- **Multi-user/production migration** (real accounts replacing the
-  localStorage-based bits) — after everything else is polished.
 - **Sidebar redesign** — resolved by removing it entirely; no longer
   pending, just noting the decision landed here in case it's revisited.
 
@@ -344,12 +557,13 @@ still an idea."
 ## File map (touched across recent sessions)
 
 ```
-api/src/server.ts                                 (latest-practice endpoint; Fisher-Yates shuffle fix)
+api/src/server.ts                                 (latest-practice endpoint; Fisher-Yates shuffle fix; new /progress/domains/trend endpoint, 2026-08-06)
 api/data/questions.json                            (full data integrity audit/fix, 2026-08-06)
 api/prisma/seed.ts                                  (unchanged, but see legacyId stability note above)
 frontend/src/layout/DashboardLayout.tsx            (sidebar removed, back-button added)
 frontend/src/layout/Sidebar.tsx                    (orphaned — nothing imports it)
-frontend/src/pages/Dashboard/Dashboard.tsx
+frontend/src/pages/Dashboard/Dashboard.tsx           (assessment results wiring; Current Study Plan redesign; Daily Quiz streak, 2026-08-06)
+frontend/src/pages/Dashboard/AssessmentQuizModal.tsx (results phase added, 2026-08-06)
 frontend/src/pages/Dashboard/InfoModal.tsx
 frontend/src/pages/Dashboard/DailyQuizModal.tsx
 frontend/src/pages/Dashboard/AssessmentQuizModal.tsx

@@ -12,9 +12,8 @@ const API_BASE = "http://127.0.0.1:4000";
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 const DEFAULT_EXAM_DATE = "2026-08-16";
 const EXAM_DATE_KEY = "studydesk_exam_date";
-const DAILY_QUIZ_KEY = "studydesk_daily_quiz_v1";
+const DAILY_QUIZ_HISTORY_KEY = "studydesk_daily_quiz_history_v1";
 const DISPLAY_NAME_KEY = "studydesk_display_name";
-const STUDY_PLAN_MODE_KEY = "studydesk_study_plan_mode";
 const ASSESSMENT_KEY = "studydesk_assessment_result_v1";
 const DOMAIN_CODES = ["D1", "D2", "D3", "D4", "D5"];
 
@@ -28,6 +27,46 @@ function pickDomainForDate(dateKey: string): string {
     hash = (hash * 31 + dateKey.charCodeAt(i)) >>> 0;
   }
   return DOMAIN_CODES[hash % DOMAIN_CODES.length];
+}
+
+function loadDailyQuizHistory(): DailyQuizResult[] {
+  try {
+    const raw = localStorage.getItem(DAILY_QUIZ_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Consecutive calendar days ending today (or ending yesterday, if today's
+// quiz hasn't been done yet — a streak doesn't break until a day is
+// actually skipped, so "haven't done today yet" shouldn't zero it out
+// while there's still time left in the day).
+function computeStreak(history: DailyQuizResult[]): number {
+  if (history.length === 0) return 0;
+  const dates = new Set(history.map((h) => h.date));
+  const today = new Date();
+  let cursor = new Date(today);
+  if (!dates.has(todayKey(today))) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!dates.has(todayKey(cursor))) return 0;
+  }
+  let streak = 0;
+  while (dates.has(todayKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+// Most recent prior completion of the SAME domain — since the daily quiz
+// rotates through all 5 domains by date, "yesterday's score" usually isn't
+// comparable; what the user actually wants is "how did I do last time I
+// got this exact topic."
+function previousScoreForDomain(history: DailyQuizResult[], domain: string, excludeDate: string): DailyQuizResult | null {
+  const matches = history.filter((h) => h.domain === domain && h.date !== excludeDate);
+  if (matches.length === 0) return null;
+  return matches.sort((a, b) => b.date.localeCompare(a.date))[0];
 }
 
 const DOMAIN_NAMES: Record<string, string> = {
@@ -170,6 +209,7 @@ const Dashboard: React.FC = () => {
   const [, setDomainProgress] = useState<DomainProgress[]>([]);
   const [examDomainProgress, setExamDomainProgress] = useState<DomainProgress[]>([]);
   const [studyDomainProgress, setStudyDomainProgress] = useState<DomainProgress[]>([]);
+  const [studyDomainTrend, setStudyDomainTrend] = useState<Record<string, { earlierAccuracy: number; recentAccuracy: number; deltaPct: number; sampleSize: number } | null>>({});
   const [practiceDomainProgress, setPracticeDomainProgress] = useState<DomainProgress[]>([]);
   const [categoriesByDomain, setCategoriesByDomain] = useState<CategorySummary[]>([]);
   const [, setCategoryProgress] = useState<CategoryProgress[]>([]);
@@ -187,21 +227,18 @@ const Dashboard: React.FC = () => {
     gettingThere: { category: string; acc: number }[];
   } | null>(null);
   const [dailyQuizResult, setDailyQuizResult] = useState<DailyQuizResult | null>(null);
+  const [dailyQuizHistory, setDailyQuizHistory] = useState<DailyQuizResult[]>([]);
   const [showDailyQuiz, setShowDailyQuiz] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { mode, toggle: toggleTheme } = useTheme();
   const [displayName] = useState(() => localStorage.getItem(DISPLAY_NAME_KEY) ?? "");
-  const [studyPlanMode, setStudyPlanMode] = useState<"hybrid" | "adaptive">(
-    () => (localStorage.getItem(STUDY_PLAN_MODE_KEY) as "hybrid" | "adaptive") ?? "hybrid"
-  );
   const [showStudyPlanInfo, setShowStudyPlanInfo] = useState(false);
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
   const [showFocusAreasInfo, setShowFocusAreasInfo] = useState(false);
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<{
     perDomain: Record<string, AssessmentPerDomain>;
-    recommendedMode: "hybrid" | "adaptive";
   } | null>(() => {
     try {
       const raw = localStorage.getItem(ASSESSMENT_KEY);
@@ -217,6 +254,11 @@ const Dashboard: React.FC = () => {
 
   const todayDomain = pickDomainForDate(todayKey(new Date()));
   const todayDomainName = DOMAIN_NAMES[todayDomain];
+  const dailyQuizStreak = useMemo(() => computeStreak(dailyQuizHistory), [dailyQuizHistory]);
+  const previousDomainScore = useMemo(
+    () => previousScoreForDomain(dailyQuizHistory, todayDomain, todayKey(new Date())),
+    [dailyQuizHistory, todayDomain]
+  );
 
   useEffect(() => {
     fetch(`${API_BASE}/attempts`)
@@ -238,6 +280,11 @@ const Dashboard: React.FC = () => {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: DomainProgress[]) => setStudyDomainProgress(Array.isArray(data) ? data : []))
       .catch(() => setStudyDomainProgress([]));
+
+    fetch(`${API_BASE}/progress/domains/trend?mode=STUDY`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => setStudyDomainTrend(data ?? {}))
+      .catch(() => setStudyDomainTrend({}));
 
     fetch(`${API_BASE}/progress/domains?mode=PRACTICE`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -269,36 +316,25 @@ const Dashboard: React.FC = () => {
       .then((data) => setLatestPractice(data ?? null))
       .catch(() => setLatestPractice(null));
 
-    try {
-      const raw = localStorage.getItem(DAILY_QUIZ_KEY);
-      if (raw) {
-        const parsed: DailyQuizResult = JSON.parse(raw);
-        if (parsed.date === todayKey(new Date())) setDailyQuizResult(parsed);
-      }
-    } catch {
-      // ignore malformed localStorage data
-    }
+    const history = loadDailyQuizHistory();
+    setDailyQuizHistory(history);
+    const todaysEntry = history.find((h) => h.date === todayKey(new Date()));
+    if (todaysEntry) setDailyQuizResult(todaysEntry);
   }, []);
 
   const handleDailyQuizComplete = (correct: number, total: number) => {
     const result: DailyQuizResult = { date: todayKey(new Date()), domain: todayDomain, correct, total };
-    localStorage.setItem(DAILY_QUIZ_KEY, JSON.stringify(result));
+    const updatedHistory = [...dailyQuizHistory.filter((h) => h.date !== result.date), result];
+    localStorage.setItem(DAILY_QUIZ_HISTORY_KEY, JSON.stringify(updatedHistory));
+    setDailyQuizHistory(updatedHistory);
     setDailyQuizResult(result);
     setShowDailyQuiz(false);
   };
 
   const handleAssessmentComplete = (perDomain: Record<string, AssessmentPerDomain>) => {
-    const pcts = Object.values(perDomain)
-      .filter(d => d.total > 0)
-      .map(d => (d.correct / d.total) * 100);
-    const spread = pcts.length > 0 ? Math.max(...pcts) - Math.min(...pcts) : 0;
-    const recommendedMode: "hybrid" | "adaptive" = spread > 25 ? "adaptive" : "hybrid";
-
-    const result = { perDomain, recommendedMode };
+    const result = { perDomain };
     localStorage.setItem(ASSESSMENT_KEY, JSON.stringify(result));
     setAssessmentResult(result);
-    setStudyPlanMode(recommendedMode);
-    localStorage.setItem(STUDY_PLAN_MODE_KEY, recommendedMode);
     setShowAssessment(false);
   };
 
@@ -436,19 +472,19 @@ const Dashboard: React.FC = () => {
         d.attempted === 0 ? "Not Started" : d.attempted >= d.total && d.total > 0 ? "Completed" : "In Progress";
       return { ...d, status };
     });
-    const notCompleted = withStatus.filter(d => d.status !== "Completed");
-
-    if (studyPlanMode === "adaptive") {
-      const withAcc = notCompleted.filter(d => d.acc !== null).sort((a, b) => (a.acc ?? 0) - (b.acc ?? 0));
-      const withoutAcc = notCompleted.filter(d => d.acc === null);
-      return [...withAcc, ...withoutAcc].slice(0, 2);
-    }
-
-    const notStarted = notCompleted.filter(d => d.status === "Not Started");
-    if (notStarted.length > 0) return notStarted.slice(0, 2);
-    const started = notCompleted.filter(d => d.acc !== null).sort((a, b) => (a.acc ?? 0) - (b.acc ?? 0));
-    return started.slice(0, 2);
-  }, [studyDomainRows, studyPlanMode]);
+    // Weak = never attempted, or attempted but under the 75% pass threshold.
+    // A domain you've fully studied but are still under 75% on stays here —
+    // completion and weakness are separate things.
+    const weak = withStatus.filter(d => d.acc === null || d.acc < WEAK_THRESHOLD);
+    // Weakest accuracy first (untried domains — no score yet — sort last,
+    // since there's nothing to rank them against).
+    return weak.sort((a, b) => {
+      if (a.acc === null && b.acc === null) return 0;
+      if (a.acc === null) return 1;
+      if (b.acc === null) return -1;
+      return a.acc - b.acc;
+    });
+  }, [studyDomainRows]);
 
   return (
     <div style={{ 
@@ -589,12 +625,12 @@ const Dashboard: React.FC = () => {
           
           {/* Current Study Plan */}
           <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SPACE.xs, flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SPACE.xs, flexShrink: 0, gap: 8 }}>
               <span style={S.label}>CURRENT STUDY PLAN</span>
               <button onClick={() => setShowStudyPlanInfo(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13 }}>ⓘ</button>
             </div>
             <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              {!assessmentResult && studyPlan.every(d => d.status === "Not Started") ? (
+              {!assessmentResult && studyDomainRows.every(d => d.attempted === 0) ? (
                 <div style={{ background: "var(--accent-bg, rgba(0,113,227,0.08))", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid var(--accent-border, rgba(0,113,227,0.2))", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>✓</div>
                   <p style={{ fontSize: 13, color: "var(--text)", margin: 0, lineHeight: 1.4 }}>
@@ -609,17 +645,49 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              ) : studyPlan.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "12px 8px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>🎉</div>
+                  <p style={{ fontSize: 13, color: "var(--text)", margin: 0, lineHeight: 1.4 }}>
+                    No weak domains right now — every domain you've attempted is at 75% or higher.
+                  </p>
+                </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", minHeight: 0 }}>
-                  {studyPlan.map((d) => (
-                    <div key={d.code} onClick={() => goToStudyDomain(d.code)} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid var(--border)", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--input-bg)" }}>
-                      <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
-                        <span style={S.dot(DOMAIN_COLORS[d.code] || "#999")} />
-                        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.code}: {d.name}</span>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>
+                    Domains under 75%, weakest first.
+                  </div>
+                  {studyPlan.map((d) => {
+                    const pct = d.acc;
+                    const barColor = pct === null ? "var(--muted)" : pct >= 50 ? "var(--warning,#ff9500)" : "var(--danger,#ff3b30)";
+                    const trend = studyDomainTrend[d.code];
+                    return (
+                      <div key={d.code} onClick={() => goToStudyDomain(d.code)} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid var(--border)", cursor: "pointer", background: "var(--input-bg)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
+                            <span style={S.dot(DOMAIN_COLORS[d.code] || "#999")} />
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.code}: {d.name}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 12, flexShrink: 0 }}>
+                            {trend && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 700,
+                                color: trend.deltaPct > 0 ? "var(--success,#34c759)" : trend.deltaPct < 0 ? "var(--danger,#ff3b30)" : "var(--muted)",
+                              }}>
+                                {trend.deltaPct > 0 ? "▲" : trend.deltaPct < 0 ? "▼" : "—"} {Math.abs(trend.deltaPct)}%
+                              </span>
+                            )}
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", whiteSpace: "nowrap" }}>
+                              {pct !== null ? `${pct}%` : "Not started"}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 999, background: "var(--panel-2, rgba(128,128,128,0.15))", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct ?? 0}%`, background: barColor, borderRadius: 999 }} />
+                        </div>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: d.status === "Completed" ? "var(--success, #34c759)" : "var(--muted)", marginLeft: 12, flexShrink: 0 }}>{d.status}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -666,6 +734,11 @@ const Dashboard: React.FC = () => {
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SPACE.xs, flexShrink: 0 }}>
               <span style={S.label}>DAILY QUIZ</span>
+              {dailyQuizStreak > 0 && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--warning,#ff9500)", display: "flex", alignItems: "center", gap: 3 }}>
+                  🔥 {dailyQuizStreak} day{dailyQuizStreak === 1 ? "" : "s"}
+                </span>
+              )}
             </div>
             <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
               <div>
@@ -673,6 +746,12 @@ const Dashboard: React.FC = () => {
                 <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", lineHeight: 1.3 }}>
                   {todayDomainName} — 10 Questions
                 </div>
+                {previousDomainScore && (
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                    Last time on this topic: {previousDomainScore.correct}/{previousDomainScore.total}
+                    {" "}({Math.round((previousDomainScore.correct / previousDomainScore.total) * 100)}%)
+                  </div>
+                )}
               </div>
               {dailyQuizResult ? (
                 <div style={{ background: "var(--input-bg)", padding: 12, borderRadius: 10, textAlign: "center", border: "1px solid var(--border)" }}>
@@ -850,15 +929,19 @@ const Dashboard: React.FC = () => {
       {showStudyPlanInfo && (
         <InfoModal title="Current Study Plan" onClose={() => setShowStudyPlanInfo(false)}>
           <p style={{ margin: "0 0 14px 0" }}>
-            Domains you <strong>haven't finished covering yet in Study</strong> — based only on Study-module
-            coverage, not how well you're scoring elsewhere. Once a domain is fully covered, it drops off this
-            list for good.
+            Every domain you're currently <strong>under 75% on in Study mode</strong> — including domains
+            you haven't attempted at all yet. A domain drops off this list once your Study accuracy in it
+            reaches 75%, even if you keep studying it further.
           </p>
           <p style={{ margin: "0 0 14px 0" }}>
-            <strong>Hybrid:</strong> unstudied domains first, then your weakest once everything's been touched.
+            Sorted <strong>weakest first</strong>. Domains you haven't started yet have no score to rank, so
+            they sort to the bottom.
           </p>
           <p style={{ margin: 0 }}>
-            <strong>Adaptive:</strong> always recommends your weakest domains, regardless of coverage.
+            The ▲/▼ next to a domain compares your accuracy on your more recent Study answers in it against
+            your earlier ones — a rough signal of whether you're actually improving there, not just where
+            you currently stand. It only shows once you've answered enough questions in that domain to be
+            meaningful.
           </p>
         </InfoModal>
       )}
