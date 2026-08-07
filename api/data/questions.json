@@ -33376,13 +33376,13 @@
           },
           {
             "label": "C",
-            "text": "Review the IT governance structure.",
+            "text": "the IT governance structure.",
             "isCorrect": false,
             "justification": "The organization may have sound IT governance and still be behind schedule or over budget."
           },
           {
             "label": "D",
-            "text": "Review the business case and project management.",
+            "text": "the business case and project management.",
             "isCorrect": true,
             "justification": "Before making any recommendations, an information systems (IS) auditor needs to understand the project and the factors that have contributed to bringing the project over budget and over schedule."
           }
