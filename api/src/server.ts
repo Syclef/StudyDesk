@@ -43,6 +43,15 @@ await app.register(cookie);
 await app.register(jwt, { secret: env.JWT_SECRET });
 await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 await app.register(questionsRoutes);
+// Every API response is explicitly non-cacheable. Combined with the
+// pageshow/bfcache handling in AuthContext and the frontend dev server's
+// own no-store header, this closes the loop from the API side too: even
+// if a browser somehow cached a fetch() response for an authenticated
+// endpoint, it wouldn't be replayed after logout.
+app.addHook("onSend", async (_req, reply) => {
+  reply.header("Cache-Control", "no-store");
+});
+
 app.addHook("onRequest", async (req, reply) => {
   // Every route needs auth except health check and the login endpoint
   // itself (you can't require a session to obtain a session). Strip the

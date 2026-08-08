@@ -1,6 +1,6 @@
 # CISA Prep — Progress Tracker
 
-Last updated: 2026-08-06 (multi-user confirmed — auth/security elevated to top priority)
+Last updated: 2026-08-08 (real authentication shipped — see "Authentication" section below)
 
 This file exists so we don't have to reconstruct project history from chat
 scrollback. Update it whenever a feature lands or a decision gets made —
@@ -433,45 +433,174 @@ priority of a couple of items below from "premature optimization" to
 
 ---
 
+## 🔐 Authentication (shipped 2026-08-08)
+
+Real per-user accounts are live, replacing the shared hardcoded `"anon"`
+account that every request used to run as. This was the top-priority
+blocker once StudyDesk was confirmed going multi-user (a real group, not
+solo use) — every single data endpoint except attempt-creation had been
+silently returning **unscoped, global data** to whoever asked.
+
+### What was built
+- **Password hashing: Argon2id**, not bcrypt (which was in `package.json`
+  but never actually used anywhere in the codebase — replaced outright).
+  OWASP's Password Storage Cheat Sheet now recommends Argon2id over
+  bcrypt specifically because it's memory-hard — bcrypt's fixed ~4KB
+  memory footprint is exactly what lets an attacker parallelize
+  brute-forcing on GPU hardware; Argon2id forces each guess to eat a
+  configurable, much larger chunk of memory instead. Config matches
+  OWASP's standard-webapp recommendation: `memoryCost: 46 MiB, timeCost:
+  2, parallelism: 1` (`api/src/lib/auth.ts`).
+- **Sessions: httpOnly JWT cookies**, not a token in `localStorage`.
+  `localStorage` is readable by any JS on the page — if an XSS bug ever
+  turns up anywhere in the app, a token sitting there is instantly
+  stealable. An httpOnly cookie isn't reachable by JS at all.
+- **No public registration.** This is a closed group — accounts are
+  provisioned via `api/scripts/create-user.ts` / `npm run create-user --
+  email password "Display Name"` (12+ char password minimum enforced —
+  length, not composition rules, per current NIST/OWASP guidance; no
+  forced "must contain a symbol" nonsense). A matching `delete-user`
+  script exists for cleanup (e.g. typo'd emails during account creation
+  — `create-user` now also validates basic email format after one such
+  typo slipped through uncaught).
+- **Every data endpoint scoped to `req.userId`** — attempts, domain
+  progress, trend, categories, latest-practice, streak, exam-reset. This
+  was the actual bulk of the work: before this, only attempt *creation*
+  ever touched a user ID; every read endpoint returned the same global
+  data to everyone regardless of who was asking.
+- **Server-side one-time assessment enforcement**
+  (`POST /auth/assessment-complete`, `User.hasCompletedAssessment`),
+  replacing the old `localStorage`-only flag — which couldn't actually
+  enforce "once ever" for anyone, since clearing storage, a different
+  browser, or a different device all trivially reset it, and it wasn't
+  even tied to a person in the first place.
+- **CORS locked to known origins** (`localhost:5173` +
+  `process.env.FRONTEND_URL` for production), replacing `origin: true`
+  (which allowed any website on the internet to call the API on a
+  visitor's behalf).
+- **Rate limiting**: 100 req/min globally, tightened to 5/min
+  specifically on `/login` against brute-force guessing.
+- **Login page** (`frontend/src/pages/Auth/LoginPage.tsx`),
+  `RequireAuth` route guard, `AuthContext` for app-wide login state.
+- Removed the now-orphaned `GameScore` model/`/scores` endpoints as part
+  of the same schema migration (games were cut from the product — see
+  below).
+
+### Bugs hit and fixed along the way (worth knowing if this breaks again)
+- **`argon2` `timeCost: 1` → assertion error.** Library requires a
+  minimum of 2. Typo on first pass; fixed to `timeCost: 2`, matching the
+  OWASP recommendation anyway (no security tradeoff, just a bug).
+- **Postgres `must be owner of table User`** when running `prisma
+  migrate dev` / `db push` — the DB user in `DATABASE_URL` wasn't the
+  owner of the existing tables (only an owner/superuser can `ALTER
+  TABLE` in Postgres, unlike regular read/write grants). Worked around
+  by temporarily pointing `DATABASE_URL` at the `postgres` superuser for
+  the one migration command, then reverting. If this comes up again,
+  the permanent fix is `ALTER TABLE "TableName" OWNER TO
+  your_app_user;` for each affected table, once, via pgAdmin4.
+- **`prisma migrate dev` wanted to reset the whole database** (drift
+  detected between migration history and actual schema — a leftover
+  migration, `20260328160050_init`, was applied to the DB but missing
+  from the local migrations folder). **Did not run `migrate reset`** —
+  that would have wiped the entire 1,072-question bank. Used
+  `npx prisma db push` instead, which syncs the schema without touching
+  migration history or requiring a shadow database.
+- **The actual root cause of "log in, briefly see the dashboard, then
+  get bounced back to `/login`"**: every `API_BASE` constant across 15
+  frontend files was hardcoded to `http://127.0.0.1:4000`, while the
+  Vite dev server runs on `http://localhost:5173`. Browsers treat
+  `127.0.0.1` and `localhost` as different sites for `SameSite` cookie
+  purposes, even on the same machine — so the `SameSite=Lax` session
+  cookie was being silently rejected by Firefox
+  ("Cookie ... rejected because it is in a cross-site context").
+  Fixed by unifying every `API_BASE` to `localhost:4000`.
+- **`LoginPage` didn't redirect an already-authenticated visitor away**
+  — navigating to `/login` while logged in just showed the login form
+  again instead of bouncing to `/`. `RequireAuth` protects the *rest* of
+  the app from unauthenticated access, but nothing did the reverse for
+  the login route itself. Fixed: `LoginPage` now checks `useAuth()` and
+  redirects immediately if a valid session already exists.
+- **A messy local git-clone divergence** (worth recording as a lesson
+  more than a bug): mid-session, the assistant's local clone fell three
+  commits behind the actual GitHub repo — including a commit that
+  contained both the Game Center removal *and* an earlier
+  `PracticeSessionPage.tsx` theme fix. Because that clone was stale, a
+  later "fix" (the `127.0.0.1`→`localhost` sed replace) was applied to
+  an old copy of that file and silently reintroduced the dark-mode-only
+  bug that had already been fixed once. Root cause: edits were made
+  across many turns without re-pulling from GitHub in between, and at
+  least one `git stash`/`pull` cycle didn't get fully reconciled
+  immediately after. Resolved via `git fetch` + `stash pop` + manually
+  resolving two small conflicts (`api/package.json`,
+  `DashboardLayout.tsx` — the latter was a comment-only clash). No data
+  or functionality was permanently lost, but it cost real back-and-forth
+  time. **Lesson for future sessions:** re-fetch/pull before trusting a
+  local clone's state as current, especially after any point where the
+  user has run their own `git add`/`commit`/`push` independently.
+- **`frontend/package.json` got accidentally overwritten with
+  `api/package.json`'s content** at some point (most likely a
+  copy-paste mix-up while placing several files across two folders in
+  the same session) and was pushed to GitHub via an unrelated `git add
+  -A` cleanup commit — meaning `git checkout HEAD -- package.json`
+  couldn't fix it, since HEAD *was* the broken version by that point.
+  Recovered by extracting the correct content from a commit prior to
+  the accidental overwrite (`git show <old-commit>:frontend/package.json`).
+- **A stray root-level `package.json`** (Electron packaging scaffold —
+  `electron/main.js` as entry point, `mammoth`/`lucide-react` deps) and
+  a companion `scripts/parse-docx-questions.ts` were discovered and
+  removed. Investigation showed `electron/main.js` never actually
+  existed in git history — this was always non-functional scaffolding
+  from the initial project commit, and `parse-docx-questions.ts` was a
+  superseded first-generation (TypeScript/mammoth-based) version of the
+  question-parsing pipeline, replaced early on by the current Python
+  `parse_questions.py`/`merge_questions.py` approach. Neither was
+  referenced anywhere in the working app.
+
+### Game Center removed entirely (2026-08-08)
+Cut from product scope (was never part of the actual CISA Prep feature
+plan). Removed: `frontend/src/pages/Games/` (6 game pages + layout +
+center), `frontend/src/components/games/` (6 game components + shared
+tile/header), `frontend/src/styles/game-center.css`,
+`frontend/src/utils/games.ts`, the `/games` route tree and its imports
+in `App.tsx`, and the `GameScore` Prisma model + `/scores/:game`
+endpoints. Pending item "Game scores → move to DB" is now moot and
+removed from the list below.
+
+### What's NOT done yet (real follow-up work, not just polish)
+- **No Settings page UI for display-name editing.** The backend
+  supports it (`PATCH /auth/me`), but there's no form anywhere in the
+  app to actually call it — the only way to set a display name right
+  now is via the `create-user` script's optional third argument, or a
+  raw `curl`/API call. This is Pending item below, now genuinely
+  actionable since the backend piece is done.
+- **No password reset / "forgot password" flow.** Not needed
+  immediately for a small admin-provisioned group, but worth knowing
+  it's absent — if someone forgets their password, the only recovery
+  path right now is `delete-user` + `create-user` again.
+- **A proper security review hasn't happened yet** — deliberately
+  deferred until the rest of the workflow (Practice routing, Study
+  color bug, etc.) is fixed first, per explicit decision this session.
+  Today's auth work followed OWASP guidance throughout, but "followed
+  guidance while building" isn't the same as a dedicated pass looking
+  specifically for holes.
+
 ## 🔧 Pending / Next up (in stated priority order)
 
-1. **Production auth + real per-user accounts — elevated to top
-   priority, 2026-08-06.** StudyDesk is now confirmed going
-   **multi-user** (a group, not solo use) — this is no longer a
-   "before going public" nice-to-have, it's a correctness blocker.
-   Bundles several related gaps, all stemming from the same root cause:
-   - **No real authentication at all right now.** Every request in
-     `server.ts` runs as a single hardcoded shared account
-     (`ANON_USER_ID = "anon"`, password `"none"`). With more than one
-     real person using this, everyone's progress, attempts, and Study
-     Plan data would collide into that one shared identity — not a
-     hypothetical risk, an immediate one as soon as a second person
-     opens the app.
-   - The assessment is meant to run **once ever per user**, but
-     enforcement is currently a `localStorage` flag only — meaningless
-     once there's more than one person, since it's not even tied to an
-     identity at all right now. True one-time enforcement needs a
-     server-side check tied to a real user account (e.g. a
-     `hasCompletedAssessment` flag checked via API before the modal can
-     open).
-   - **CORS is wide open** (`origin: true` in `server.ts`) — needs
-     locking down to the exact deployed frontend domain before going
-     public.
-   - **No rate limiting** on the API — needed both against abuse and
-     to avoid burning through free-tier hosting quotas.
-   - Once real accounts exist, the cached `UserDomainStat`-style table
-     idea (see Study Plan roadmap above) also becomes worth doing, not
-     just theoretical — live-aggregating raw `AttemptAnswer` rows on
-     every dashboard load is fine for one person, less fine for several.
+1. ~~Production auth + real per-user accounts~~ — **done, 2026-08-08.**
+   See the full "Authentication" section above. One item from the old
+   list here is still genuinely worth doing, not yet done: the cached
+   `UserDomainStat`-style table idea (see Study Plan roadmap above) —
+   live-aggregating raw `AttemptAnswer` rows on every dashboard load is
+   fine at today's scale, less fine as multiple real users' attempt
+   history grows.
 2. **Practice module** — routing is broken; UI needs an overhaul.
 3. **Study module answer-color bug** — correct answers sometimes show
    red instead of green.
 4. **Exam landing page** — goes blank on "Back to Setup" navigation.
 5. **Settings page** — gear icon currently only has the theme toggle.
    Display name editing was pulled out of the header early on and was
-   meant to move here; never built. (Now more clearly needed once real
-   accounts exist — this is presumably where per-user display name
-   actually belongs.)
+   meant to move here; never built. **Now fully actionable** — the
+   backend (`PATCH /auth/me`) is done, this just needs the form UI.
 6. ~~Assessment-related idea (unspecified)~~ — **done, 2026-08-06.** Turned
    out to be two concrete bugs: the assessment silently closed with no
    results screen shown (score, per-domain breakdown were computed but
@@ -481,8 +610,9 @@ priority of a couple of items below from "premature optimization" to
    selection logic was redesigned the same day (see the "Current Study
    Plan redesign" entry above) to just show weak domains directly,
    which made Hybrid-vs-Adaptive a distinction without a difference.
-7. **Game scores** — currently not persisted to the database; move
-   them there.
+7. ~~Game scores — move to DB~~ — **moot, 2026-08-08.** Game Center was
+   cut from the product entirely (see Authentication section above);
+   there's nothing left to persist.
 8. **Dashboard metrics** — connect remaining placeholder metrics to
    real data.
 9. **Exam intro page** — not yet built.
@@ -497,14 +627,24 @@ priority of a couple of items below from "premature optimization" to
     idle spin-down/cold-start tradeoff) + **Neon or Supabase** (Postgres —
     both have a genuinely permanent free tier, unlike Railway which
     dropped its free tier in favor of a 30-day $5 trial requiring a
-    card). Blocked on: the 18 hardcoded `localhost`/`127.0.0.1`
-    references in the frontend need to become an env var, and item 1
-    above (auth/security) must land *before* this goes live to the
-    group, not after — this is now a hard dependency, not a suggestion.
-12. **Spot-check the D4 question-category reassignments** done during
-    the 2026-08-06 data integrity audit against live ISACA Perform, since
-    those were resolved by inference rather than direct re-verification
-    (see note above).
+    card). Auth is now done, which was the hard blocker; still
+    outstanding: the frontend's `API_BASE` constants (now unified to
+    `localhost:4000` across all 15 files, per the Authentication
+    section above) need to become a real environment variable rather
+    than a hardcoded localhost value, so the deployed frontend can
+    actually reach the deployed API.
+12. ~~Spot-check the D4 question-category reassignments~~ — **done.**
+    Live-verified against ISACA Perform mid-session; found and reverted
+    3 incorrect inference-based guesses (D4-605, D4-613, D4-504 all
+    belonged in their *original* categories, not where they'd been
+    moved), confirmed the 7 blank-category "Problem and Incident
+    Management" assignments were exactly right, and surfaced one
+    genuine ISACA-side data quirk along the way: a question whose
+    Knowledge Statement *label* read "IT Change, Configuration, and
+    Patch Management" while its actual page header, breadcrumb, and
+    Task Statement all agreed it's really "Operational Log Management"
+    — ISACA's own content has a mislabeled field on that one question,
+    not a mistake on this end.
 
 ## 📋 Deferred (explicitly, not forgotten)
 
@@ -557,27 +697,55 @@ priority of a couple of items below from "premature optimization" to
 ## File map (touched across recent sessions)
 
 ```
-api/src/server.ts                                 (latest-practice endpoint; Fisher-Yates shuffle fix; new /progress/domains/trend endpoint, 2026-08-06)
+api/src/server.ts                                 (latest-practice endpoint; Fisher-Yates shuffle fix; /progress/domains/trend; every endpoint scoped per-user; CORS locked down; rate limiting, 2026-08-08)
+api/src/lib/auth.ts                                (NEW, 2026-08-08 — Argon2id hashing, JWT session cookies, requireAuth hook)
+api/src/config/env.ts                              (JWT_SECRET now required, not optional, 2026-08-08)
+api/scripts/create-user.ts                         (NEW, 2026-08-08 — admin account provisioning, no public registration)
+api/scripts/delete-user.ts                         (NEW, 2026-08-08 — admin account cleanup)
+api/prisma/schema.prisma                           (User: displayName, hasCompletedAssessment; GameScore removed, 2026-08-08)
 api/data/questions.json                            (full data integrity audit/fix, 2026-08-06)
-api/prisma/seed.ts                                  (unchanged, but see legacyId stability note above)
-frontend/src/layout/DashboardLayout.tsx            (sidebar removed, back-button added)
+api/prisma/seed.ts                                  (bcryptjs → hashPassword (Argon2id), 2026-08-08)
+frontend/src/app/App.tsx                           (routes wrapped in RequireAuth, /login added, Games routes removed, 2026-08-08)
+frontend/src/app/RequireAuth.tsx                   (NEW, 2026-08-08 — redirects to /login if unauthenticated)
+frontend/src/pages/Auth/LoginPage.tsx              (NEW, 2026-08-08 — also redirects away if already authenticated)
+frontend/src/utils/AuthContext.tsx                 (NEW, 2026-08-08 — app-wide login state)
+frontend/src/utils/apiFetch.ts                     (NEW, 2026-08-08 — patches window.fetch for credentials + global 401 handling)
+frontend/src/main.tsx                              (installs apiFetch patch; game-center.css import removed, 2026-08-08)
+frontend/src/layout/DashboardLayout.tsx            (sidebar removed, back-button added; logout lives in Dashboard's own Settings dropdown, not here)
 frontend/src/layout/Sidebar.tsx                    (orphaned — nothing imports it)
-frontend/src/pages/Dashboard/Dashboard.tsx           (assessment results wiring; Current Study Plan redesign; Daily Quiz streak, 2026-08-06)
+frontend/src/pages/Dashboard/Dashboard.tsx           (assessment results wiring; Current Study Plan redesign; Daily Quiz streak; real /auth/assessment-complete call, 2026-08-06/08)
 frontend/src/pages/Dashboard/AssessmentQuizModal.tsx (results phase added, 2026-08-06)
 frontend/src/pages/Dashboard/InfoModal.tsx
 frontend/src/pages/Dashboard/DailyQuizModal.tsx
-frontend/src/pages/Dashboard/AssessmentQuizModal.tsx
 frontend/src/pages/Dashboard/HelpModal.tsx
 frontend/src/pages/Exam/ExamLandingPage.tsx
 frontend/src/pages/Exam/examUtils.ts
+frontend/src/pages/Exam/ExamHistoryPage.tsx
 frontend/src/pages/Exam/ExamTakePage.tsx           (theme fix, 2026-08-06)
 frontend/src/pages/Exam/ExamReviewPage.tsx         (theme fix — wired up dead getTheme(), 2026-08-06)
 frontend/src/pages/Exam/ExamResultsPage.tsx        (theme fix — wired up dead getTheme(), 2026-08-06)
 frontend/src/pages/Simulator/SimulatorPage.tsx     (theme fix, 2026-08-06)
 frontend/src/pages/Study/StudyPage.tsx
 frontend/src/pages/Practice/PracticeCategories.tsx
-frontend/src/pages/Practice/PracticeSessionPage.tsx
+frontend/src/pages/Practice/PracticeSessionPage.tsx (theme fix, 2026-08-08)
+frontend/src/api/flashcards.ts, practice.ts, questions.ts
 frontend/src/utils/examCycles.ts
+
+Every file above with an API_BASE constant was unified from
+127.0.0.1:4000 → localhost:4000 on 2026-08-08 (see Authentication
+section for why — SameSite cookie rejection).
+
+Removed entirely, 2026-08-08 (Game Center cut from product):
+frontend/src/pages/Games/                — 6 pages + layout + center
+frontend/src/components/games/           — 6 components + shared tile/header
+frontend/src/styles/game-center.css
+frontend/src/utils/games.ts
+
+Removed entirely, 2026-08-08 (dead/unused, confirmed via git history):
+package.json, package-lock.json, node_modules/  (repo root — Electron
+  packaging scaffold; electron/main.js never existed in git history)
+scripts/parse-docx-questions.ts  (superseded first-gen question parser,
+  replaced by Python parse_questions.py/merge_questions.py early on)
 
 Tooling (outside app source):
 isaca-clean-copy.js  (Tampermonkey userscript — copies questions from ISACA Perform)

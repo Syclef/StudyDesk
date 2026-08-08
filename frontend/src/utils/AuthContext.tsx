@@ -29,11 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
       if (res.ok) {
         setUser(await res.json());
-      } else {
+      } else if (res.status === 401) {
+        // Session is actually invalid/expired — genuinely logged out.
         setUser(null);
       }
+      // Any other failure (429 rate-limited, 500, network hiccup) is not
+      // proof the session is invalid — leave the current `user` state as
+      // it was rather than falsely logging someone out because of an
+      // unrelated server hiccup. Rapid back/forward navigation (each
+      // triggering a full reload + a burst of re-fetches) can plausibly
+      // hit the rate limiter; that's a reason to back off, not a reason
+      // to force a real re-login.
     } catch {
-      setUser(null);
+      // Network failure — same reasoning: don't assume logged-out.
     }
   };
 
@@ -44,6 +52,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerUnauthorizedHandler(() => setUser(null));
 
     refreshUser().finally(() => setLoading(false));
+
+    // Browser back/forward can restore a page from bfcache — a frozen
+    // snapshot of the ENTIRE page (DOM + running JS state), served
+    // instantly without re-running any code, including this effect.
+    // That's a real security problem, not just a UX quirk: if someone
+    // logs out and then presses back, a bfcache restore could show the
+    // last-rendered authenticated page exactly as it looked, without ever
+    // re-checking whether the session is still valid.
+    //
+    // A soft fix (just re-fetching /auth/me in the background) isn't
+    // reliable enough here — it still lets the stale cached page render
+    // first, however briefly, before state catches up. The correct fix
+    // is to never let that cached page be shown at all: force a full hard
+    // reload on any bfcache restore. A real reload re-runs everything
+    // from scratch against the actual current server session state, with
+    // zero cached JS/DOM state involved — there's nothing stale left to
+    // accidentally expose.
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
   const login = async (email: string, password: string) => {
