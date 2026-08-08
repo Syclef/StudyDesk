@@ -37,6 +37,15 @@ async function main() {
 
   const normalizedEmail = email.toLowerCase().trim();
 
+  // Basic sanity check — not full RFC validation, just enough to catch
+  // obvious typos (double dots, missing @, etc.) before they silently
+  // create an account nobody can ever log into.
+  const emailPattern = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+  if (!emailPattern.test(normalizedEmail)) {
+    console.error(`❌ "${normalizedEmail}" doesn't look like a valid email address. Double-check for typos.`);
+    process.exit(1);
+  }
+
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     console.error(`❌ A user with email "${normalizedEmail}" already exists.`);

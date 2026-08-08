@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const API_BASE = "http://127.0.0.1:4000";
+const API_BASE = "http://localhost:4000";
 const DOMAIN_CODES = ["D1", "D2", "D3", "D4", "D5"];
 const PER_DOMAIN = 5;
 const SEEN_KEY = "studydesk_assessment_seen_questions_v1";

@@ -1,5 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
+import { AuthProvider } from "../utils/AuthContext";
+import RequireAuth from "./RequireAuth";
+
+/* Auth */
+import LoginPage from "../pages/Auth/LoginPage";
 
 /* Main Pages */
 import CourseHome from "../pages/Dashboard/Dashboard";
@@ -29,11 +34,13 @@ import SimulatorPage from "../pages/Simulator/SimulatorPage";
 function AppRoutes() {
   return (
     <Routes>
-      {/* FOCUS MODE */}
-      <Route path="/session/:mode/:id" element={<SimulatorPage />} />
+      {/* Public — no session required */}
+      <Route path="/login" element={<LoginPage />} />
 
-      {/* BASE CAMP */}
-      <Route element={<DashboardLayout />}>
+      {/* Everything below requires a logged-in session */}
+      <Route path="/session/:mode/:id" element={<RequireAuth><SimulatorPage /></RequireAuth>} />
+
+      <Route element={<RequireAuth><DashboardLayout /></RequireAuth>}>
         {/* MAIN SECTION */}
         <Route path="/" element={<CourseHome />} />
 
@@ -62,7 +69,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

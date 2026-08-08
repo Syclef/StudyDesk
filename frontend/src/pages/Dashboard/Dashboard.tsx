@@ -5,15 +5,15 @@ import HelpModal from "./HelpModal";
 import AssessmentQuizModal, { type AssessmentPerDomain } from "./AssessmentQuizModal";
 import InfoModal from "./InfoModal";
 import { useTheme } from "../../utils/theme";
+import { useAuth } from "../../utils/AuthContext";
 import { computeExamCycles } from "../../utils/examCycles";
 
-const API_BASE = "http://127.0.0.1:4000";
+const API_BASE = "http://localhost:4000";
 
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 const DEFAULT_EXAM_DATE = "2026-08-16";
 const EXAM_DATE_KEY = "studydesk_exam_date";
 const DAILY_QUIZ_HISTORY_KEY = "studydesk_daily_quiz_history_v1";
-const DISPLAY_NAME_KEY = "studydesk_display_name";
 const ASSESSMENT_KEY = "studydesk_assessment_result_v1";
 const DOMAIN_CODES = ["D1", "D2", "D3", "D4", "D5"];
 
@@ -232,7 +232,8 @@ const Dashboard: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { mode, toggle: toggleTheme } = useTheme();
-  const [displayName] = useState(() => localStorage.getItem(DISPLAY_NAME_KEY) ?? "");
+  const { user, logout } = useAuth();
+  const displayName = user?.displayName ?? "";
   const [showStudyPlanInfo, setShowStudyPlanInfo] = useState(false);
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
   const [showFocusAreasInfo, setShowFocusAreasInfo] = useState(false);
@@ -336,6 +337,11 @@ const Dashboard: React.FC = () => {
     localStorage.setItem(ASSESSMENT_KEY, JSON.stringify(result));
     setAssessmentResult(result);
     setShowAssessment(false);
+    // Server-side, tied to the logged-in account — the localStorage write
+    // above is just a client-side cache of the score breakdown for display;
+    // this is what actually makes "once ever" enforceable across devices/
+    // browsers, unlike the old localStorage-only flag.
+    fetch(`${API_BASE}/auth/assessment-complete`, { method: "POST", credentials: "include" }).catch(() => {});
   };
 
   const goToStudyDomain = (code: string) => {
@@ -583,6 +589,25 @@ const Dashboard: React.FC = () => {
                     )}
                   </button>
                 </div>
+                <div style={{ height: 1, background: "var(--border)", margin: "12px 0" }} />
+                <button
+                  onClick={async () => {
+                    await logout();
+                    navigate("/login", { replace: true });
+                  }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 8,
+                    background: "none", border: "none", color: "var(--danger, #ff3b30)",
+                    fontSize: 13, fontWeight: 500, cursor: "pointer", padding: "6px 0", textAlign: "left",
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Log out
+                </button>
               </div>
             )}
           </div>

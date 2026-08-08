@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "create-user": "tsx scripts/create-user.ts"
+    "create-user": "tsx scripts/create-user.ts",
+    "delete-user": "tsx scripts/delete-user.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",

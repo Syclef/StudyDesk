@@ -2,7 +2,7 @@ import { fetchQuestions } from "../../api/questions";
 import { ExamMode, ExamQuestion, ExamSession } from "./examTypes";
 import { CISA_DOMAIN_WEIGHTS } from "../../utils/cisaWeights";
 
-const API_BASE = "http://127.0.0.1:4000";
+const API_BASE = "http://localhost:4000";
 
 const DOMAIN_MAP: Record<number, string> = {
   1: "D1", 2: "D2", 3: "D3", 4: "D4", 5: "D5",
