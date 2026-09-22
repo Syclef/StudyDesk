@@ -19,7 +19,7 @@ export default defineConfig({
     // this ends up on (e.g. a vercel.json headers rule) — this only
     // covers the Vite dev server.
     headers: {
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
     },
     proxy: {
       "/flashcards": {

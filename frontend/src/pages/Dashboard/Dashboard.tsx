@@ -8,7 +8,7 @@ import { useTheme } from "../../utils/theme";
 import { useAuth } from "../../utils/AuthContext";
 import { computeExamCycles } from "../../utils/examCycles";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 const DEFAULT_EXAM_DATE = "2026-08-16";

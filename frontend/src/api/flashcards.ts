@@ -11,7 +11,7 @@ export interface Flashcard {
   definition: string;
 }
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 export async function fetchFlashcards(): Promise<Flashcard[]> {
   const res = await fetch(`${API_BASE}/flashcards`);

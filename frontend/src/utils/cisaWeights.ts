@@ -9,6 +9,7 @@
 // earlier, superseded set (21/17/12/23/27). Import this from here in any
 // file that needs domain-weighted selection, rather than re-declaring it
 // locally, so a future correction only has to happen once.
+
 export const CISA_DOMAIN_WEIGHTS: Record<string, number> = {
   D1: 0.18,
   D2: 0.18,

@@ -40,10 +40,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // While the session check is in flight (every fresh page load/reload —
+  // including the hard reload forced on bfcache restore), don't render
+  // anything yet. Without this, the actual login form was visible for
+  // that entire window and only bounced away afterward — a real,
+  // visible flash of the login form even when still authenticated.
+  if (loading) {
+    return null;
+  }
+
   // If there's already a valid session (e.g. navigated here directly, or
   // via the back button, while logged in), don't show the login form at
   // all — send them straight back to where they'd actually want to be.
-  if (!loading && user) {
+  if (user) {
     return <Navigate to={location.state?.from ?? "/"} replace />;
   }
 

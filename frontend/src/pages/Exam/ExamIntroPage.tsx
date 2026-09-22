@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { CISA_DOMAIN_WEIGHTS } from "../../utils/cisaWeights";
 
 type LocationState = {
   mode?: "full" | "domain" | "custom";
@@ -90,22 +91,25 @@ export default function ExamIntroPage() {
       }}>
         <h2 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 14px 0" }}>Domain Weights</h2>
         {[
-          { domain: "D1 — Information System Auditing Process", pct: 21 },
-          { domain: "D2 — Governance and Management of IT", pct: 17 },
-          { domain: "D3 — IS Acquisition, Development and Implementation", pct: 12 },
-          { domain: "D4 — IS Operations and Business Resilience", pct: 23 },
-          { domain: "D5 — Protection of Information Assets", pct: 27 },
-        ].map((d) => (
-          <div key={d.domain} style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-              <span style={{ color: "var(--text)" }}>{d.domain}</span>
-              <span style={{ fontWeight: 700, color: "var(--accent)" }}>{d.pct}%</span>
+          { key: "D1", domain: "D1 — Information System Auditing Process" },
+          { key: "D2", domain: "D2 — Governance and Management of IT" },
+          { key: "D3", domain: "D3 — IS Acquisition, Development and Implementation" },
+          { key: "D4", domain: "D4 — IS Operations and Business Resilience" },
+          { key: "D5", domain: "D5 — Protection of Information Assets" },
+        ].map((d) => {
+          const pct = Math.round(CISA_DOMAIN_WEIGHTS[d.key] * 100);
+          return (
+            <div key={d.domain} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: "var(--text)" }}>{d.domain}</span>
+                <span style={{ fontWeight: 700, color: "var(--accent)" }}>{pct}%</span>
+              </div>
+              <div style={{ height: 4, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: "var(--accent)", borderRadius: 999 }} />
+              </div>
             </div>
-            <div style={{ height: 4, borderRadius: 999, background: "var(--border)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${d.pct}%`, background: "var(--accent)", borderRadius: 999 }} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Actions */}

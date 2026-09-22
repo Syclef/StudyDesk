@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getStudyProgress, clearCategoryProgress, clearAllStudyProgress, type StudyCategoryProgress } from "../../utils/studyProgress";
 import "../../styles/study-plan.css";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 interface CategorySummary {
   domain: string;

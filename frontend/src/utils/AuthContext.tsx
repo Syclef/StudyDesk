@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { registerUnauthorizedHandler } from "./apiFetch";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 export interface AuthUser {
   id: string;
@@ -24,24 +24,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = async (attempt = 1) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
       if (res.ok) {
         setUser(await res.json());
-      } else if (res.status === 401) {
+        return;
+      }
+      if (res.status === 401) {
         // Session is actually invalid/expired — genuinely logged out.
         setUser(null);
+        return;
       }
-      // Any other failure (429 rate-limited, 500, network hiccup) is not
-      // proof the session is invalid — leave the current `user` state as
-      // it was rather than falsely logging someone out because of an
-      // unrelated server hiccup. Rapid back/forward navigation (each
-      // triggering a full reload + a burst of re-fetches) can plausibly
-      // hit the rate limiter; that's a reason to back off, not a reason
-      // to force a real re-login.
+      // Anything else (429 rate-limited, 500, etc.) isn't proof the
+      // session is invalid. On a normal state update this would be safe
+      // to just ignore — but this function also runs on a fresh page
+      // load/reload (including the hard reload forced on bfcache
+      // restore), where there's no prior "logged in" state to fall back
+      // on; `user` starts at null every time regardless of the real
+      // session. Retry a couple of times with backoff before giving up,
+      // so a transient rate-limit hit from rapid navigation doesn't look
+      // identical to actually being logged out.
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 400));
+        return refreshUser(attempt + 1);
+      }
     } catch {
-      // Network failure — same reasoning: don't assume logged-out.
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 400));
+        return refreshUser(attempt + 1);
+      }
     }
   };
 
